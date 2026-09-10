@@ -1,0 +1,251 @@
+{
+  "id": "day-07",
+  "slug": "reading-data-select-include",
+  "day": 7,
+  "title": "Reading Data + select vs include",
+  "shortTitle": "Reading Data",
+  "milestoneId": "milestone-2",
+  "description": "Build controlled queries with findMany, findUnique, findFirst, understand data pruning with select, and master relation loading with include.",
+  "estimatedMinutes": 50,
+  "completionLearnings": [
+    "Mastered the distinction between findUnique (indexed/unique fields only) vs findFirst vs findMany",
+    "Understood the Golden Rule of Prisma: Never combine select and include at the root of the same object",
+    "Pruned sensitive columns (password hashes, internal flags) by shaping output with nested select"
+  ],
+  "concepts": [
+    {
+      "id": "day-07-concept-1",
+      "order": 1,
+      "title": "Query Execution: findUnique, findFirst, findMany",
+      "shortDescription": "Master the fundamental read methods and their unique constraint rules.",
+      "theory": {
+        "summary": "Prisma divides read queries by specificity: findUnique queries strictly by @id or @unique fields, returning 0 or 1 record. findFirst queries by any arbitrary condition and returns the first match. findMany returns an array of all matching rows.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Fast Indexed Lookup",
+          "explanation": "findUnique requires a unique field in where, generating an index scan.",
+          "code": "// Fast indexed single lookup\nconst user = await prisma.user.findUnique({\n  where: { email: 'alice@prisma.io' }\n});"
+        },
+        "explanation": [
+          "findUnique: Guaranteed to use an index in SQL because the where condition only accepts fields marked with @id or @unique.",
+          "findFirst: Useful when filtering by non-unique fields (e.g. status: \"ACTIVE\") with an orderBy clause.",
+          "findMany: Returns an array. Always combine with take and skip in production to avoid fetching millions of rows into memory."
+        ],
+        "keyTakeaway": "Always prefer findUnique over findFirst when searching by an ID or unique key.",
+        "mcqs": [
+          {
+            "id": "mcq-7-1",
+            "question": "Why will \"prisma.user.findUnique({ where: { status: \"ACTIVE\" } })\" fail to compile in TypeScript?",
+            "options": [
+              "Because status is a reserved keyword in Prisma",
+              "Because findUnique strictly requires fields that have an @id or @unique constraint in schema.prisma",
+              "Because findUnique cannot return users",
+              "Because active users cannot be queried"
+            ],
+            "correctIndex": 1,
+            "explanation": "findUnique enforces compile-time safety: only unique columns are allowed in where."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-7-1",
+          "title": "Task 1 (Guided): Find Product by Unique SKU",
+          "description": "Use prisma.product.findUnique to find a product by its unique sku parameter.",
+          "type": "guided",
+          "targetModel": "product",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.product.findUnique",
+            "Set where: { sku }"
+          ],
+          "initialCode": "export async function getProductBySku(sku: string) {\n  return await prisma.product.findUnique({\n    // Complete query\n  });\n}",
+          "solutionCode": "export async function getProductBySku(sku: string) {\n  return await prisma.product.findUnique({\n    where: { sku }\n  });\n}",
+          "solutionExplanation": "sku is marked @unique on Product, making it valid for findUnique.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use where: { sku }."
+            }
+          ],
+          "validation": {
+            "targetModel": "product",
+            "requiredMethod": "findUnique",
+            "requiredWhereClauses": [
+              "sku"
+            ]
+          },
+          "successMessage": "Great job! findUnique executed over indexed SKU."
+        },
+        {
+          "id": "task-7-2",
+          "title": "Task 2 (Independent): Find Latest Active Discount Code",
+          "description": "Find the first active discount code ordered by createdAt descending.",
+          "type": "independent",
+          "targetModel": "discount",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.discount.findFirst",
+            "where: { isActive: true }",
+            "orderBy: { createdAt: \"desc\" }"
+          ],
+          "initialCode": "export async function getLatestDiscount() {\n  // Return first active discount code ordered by createdAt descending\n}",
+          "solutionCode": "export async function getLatestDiscount() {\n  return await prisma.discount.findFirst({\n    where: { isActive: true },\n    orderBy: { createdAt: 'desc' }\n  });\n}",
+          "solutionExplanation": "findFirst paired with orderBy desc retrieves the freshest matching record.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Pass where: { isActive: true } and orderBy: { createdAt: \"desc\" }."
+            }
+          ],
+          "validation": {
+            "targetModel": "discount",
+            "requiredMethod": "findFirst",
+            "requiredWhereClauses": [
+              "isActive"
+            ]
+          },
+          "successMessage": "Well done! Latest discount code retrieved."
+        }
+      ]
+    },
+    {
+      "id": "day-07-concept-2",
+      "order": 2,
+      "title": "Data Shaping (select) vs Relation Loading (include)",
+      "shortDescription": "The Golden Rule: Never combine select and include at the root of the same object.",
+      "theory": {
+        "summary": "select picks specific scalar columns to return. include eager-loads related models. The Golden Rule: you cannot use select and include at the same root level! If you need both scalar pruning and relations, nest select inside select.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Nested Select Pattern",
+          "explanation": "Nesting relation selection inside select prunes scalar fields while loading related posts.",
+          "code": "// Nesting relation selection inside select\nconst userWithPosts = await prisma.user.findUnique({\n  where: { id: 1 },\n  select: {\n    id: true,\n    name: true,\n    posts: {\n      select: { id: true, title: true }\n    }\n  }\n});"
+        },
+        "explanation": [
+          "Why root select + include is forbidden: It is ambiguous whether unselected fields on the root should be returned.",
+          "Solution: Use select exclusively, and treat relation fields as nested objects with their own select block."
+        ],
+        "keyTakeaway": "To load relations and prune fields simultaneously, use nested select.",
+        "mcqs": [
+          {
+            "id": "mcq-7-2",
+            "question": "What happens if you provide both \"select\" and \"include\" at the root level of a Prisma query?",
+            "options": [
+              "Prisma automatically merges them",
+              "TypeScript compiler throws an error: \"Please either use select or include on an object, you cannot use both\"",
+              "Prisma ignores the select block and includes everything",
+              "The query executes raw SQL instead"
+            ],
+            "correctIndex": 1,
+            "explanation": "Prisma Client enforces strict mutual exclusivity between root select and include."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-7-3",
+          "title": "Task 1 (Guided): Nested Select for Author Profile & Posts",
+          "description": "Retrieve user by id selecting id, name, and nested posts (selecting post id and title).",
+          "type": "guided",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.user.findUnique where id: authorId",
+            "Use select to return id: true, name: true",
+            "Inside select, include posts: { select: { id: true, title: true } }"
+          ],
+          "initialCode": "export async function getAuthorPublicProfile(authorId: number) {\n  return await prisma.user.findUnique({\n    where: { id: authorId },\n    // Select id, name, and nested posts (id, title)\n  });\n}",
+          "solutionCode": "export async function getAuthorPublicProfile(authorId: number) {\n  return await prisma.user.findUnique({\n    where: { id: authorId },\n    select: {\n      id: true,\n      name: true,\n      posts: {\n        select: { id: true, title: true }\n      }\n    }\n  });\n}",
+          "solutionExplanation": "Uses nested select to fetch the author details and their posts simultaneously without sensitive fields.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Place posts: { select: { id: true, title: true } } inside the select block."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "findUnique",
+            "requiredFieldsInSelect": [
+              "id",
+              "name",
+              "posts"
+            ]
+          },
+          "successMessage": "Perfect nested select query!"
+        },
+        {
+          "id": "task-7-4",
+          "title": "Task 2 (Independent): Fix Root select + include Crash",
+          "description": "Fix a query that crashed with \"Please either use select or include on an object, you cannot use both\".",
+          "type": "independent",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Refactor query to use select only",
+            "Move posts: true inside the select block"
+          ],
+          "initialCode": "export async function getAuthorWithPostsBuggy(id: number) {\n  return await prisma.user.findUnique({\n    where: { id },\n    select: { id: true, email: true },\n    include: { posts: true } // ILLEGAL: Cannot combine select and include at root\n  } as any);\n}",
+          "solutionCode": "export async function getAuthorWithPostsBuggy(id: number) {\n  return await prisma.user.findUnique({\n    where: { id },\n    select: {\n      id: true,\n      email: true,\n      posts: true\n    }\n  });\n}",
+          "solutionExplanation": "Moving posts: true into select satisfies Prisma type safety.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Delete \"include: { posts: true }\" and add \"posts: true\" inside select."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "findUnique",
+            "requiredFieldsInSelect": [
+              "id",
+              "email",
+              "posts"
+            ]
+          },
+          "successMessage": "Crash eliminated! Clean select tree established."
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-07-challenge",
+    "title": "Day 7 Final Challenge: High-Performance Profile & Feed Loader",
+    "scenario": "Build a secure author feed query: retrieve user id and name, and include only published posts (id, title, views).",
+    "tasks": [
+      {
+        "id": "challenge-7-1",
+        "title": "Step 1: Build Author Feed Query",
+        "description": "Query user with nested published posts.",
+        "type": "challenge",
+        "targetModel": "user",
+        "activeTab": "editor",
+        "instructions": [
+          "Find user by id",
+          "Select id, name, and posts",
+          "In posts select id, title, and views"
+        ],
+        "initialCode": "export async function getSecureAuthorFeed(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    select: {\n      id: true,\n      name: true,\n      posts: {\n        select: { id: true, title: true, views: true }\n      }\n    }\n  });\n}",
+        "solutionCode": "export async function getSecureAuthorFeed(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    select: {\n      id: true,\n      name: true,\n      posts: {\n        select: { id: true, title: true, views: true }\n      }\n    }\n  });\n}",
+        "solutionExplanation": "Secure nested query strictly excluding sensitive user data.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use nested select for posts."
+          }
+        ],
+        "validation": {
+          "targetModel": "user",
+          "requiredMethod": "findUnique",
+          "requiredFieldsInSelect": [
+            "id",
+            "name",
+            "posts"
+          ]
+        },
+        "successMessage": "Day 7 challenge complete! Secure feed query constructed."
+      }
+    ]
+  }
+}

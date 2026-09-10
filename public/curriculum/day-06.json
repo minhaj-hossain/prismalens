@@ -1,0 +1,219 @@
+{
+  "id": "day-06",
+  "slug": "client-lifecycle-connections",
+  "day": 6,
+  "title": "PrismaClient Lifecycle & Connections",
+  "shortTitle": "Client Lifecycle",
+  "milestoneId": "milestone-2",
+  "description": "Understand connection management, connection pooling limits, singleton patterns in Next.js/Express, query logging, and graceful shutdown.",
+  "estimatedMinutes": 40,
+  "completionLearnings": [
+    "Mastered the global PrismaClient singleton pattern to avoid connection exhaustion in HMR development",
+    "Configured query performance logging with event listeners for slow-query detection",
+    "Implemented clean process shutdown handlers with prisma.$disconnect()"
+  ],
+  "concepts": [
+    {
+      "id": "day-06-concept-1",
+      "order": 1,
+      "title": "The Global PrismaClient Singleton Pattern",
+      "shortDescription": "Prevent \"Too many connections\" errors during development hot module reload.",
+      "theory": {
+        "summary": "Each new PrismaClient() opens a dedicated connection pool to PostgreSQL. In development frameworks with Hot Module Reloading (Next.js, Vite, Express tsx), editing code re-runs files, creating new client instances until PostgreSQL exhausts its connection limit. Attaching the client to globalThis preserves the single connection pool across reloads.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Global Singleton Blueprint",
+          "explanation": "Caches the client instance on globalThis during development.",
+          "code": "// src/lib/prisma.ts\nimport { PrismaClient } from '@prisma/client';\n\nconst globalForPrisma = globalThis as unknown as {\n  prisma: PrismaClient | undefined;\n};\n\nexport const prisma = globalForPrisma.prisma ?? new PrismaClient();\n\nif (process.env.NODE_ENV !== 'production') {\n  globalForPrisma.prisma = prisma;\n}"
+        },
+        "explanation": [
+          "In production: Server runs once, so global caching is not strictly required, but harmless.",
+          "In development: Every file edit retains the existing client rather than re-instantiating connections."
+        ],
+        "keyTakeaway": "Always export a single shared prisma instance from a dedicated lib/prisma.ts file.",
+        "mcqs": [
+          {
+            "id": "mcq-6-1",
+            "question": "What error occurs if you call \"new PrismaClient()\" inside an API route handler?",
+            "options": [
+              "SyntaxError: Unexpected identifier",
+              "Database connection pool exhaustion (\"Error: Too many clients already\")",
+              "TypeScript compilation failure",
+              "Prisma drops all tables"
+            ],
+            "correctIndex": 1,
+            "explanation": "Every HTTP request would open new database sockets, quickly consuming the database max_connections limit."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-6-1",
+          "title": "Task 1 (Guided): Implement lib/prisma.ts Singleton",
+          "description": "Complete the production-ready PrismaClient singleton pattern checking process.env.NODE_ENV.",
+          "type": "guided",
+          "targetModel": "singleton",
+          "activeTab": "editor",
+          "instructions": [
+            "Cast globalThis to { prisma: PrismaClient | undefined }",
+            "Export const prisma = globalForPrisma.prisma ?? new PrismaClient()",
+            "If NODE_ENV !== \"production\", save prisma to globalForPrisma.prisma"
+          ],
+          "initialCode": "// Implement the global singleton pattern below:\nexport function getPrismaSingleton(globalObj: any, PrismaClientClass: any, env: string) {\n  const client = globalObj.prisma ?? new PrismaClientClass();\n  if (env !== 'production') {\n    globalObj.prisma = client;\n  }\n  return client;\n}",
+          "solutionCode": "export function getPrismaSingleton(globalObj: any, PrismaClientClass: any, env: string) {\n  const client = globalObj.prisma ?? new PrismaClientClass();\n  if (env !== 'production') {\n    globalObj.prisma = client;\n  }\n  return client;\n}",
+          "solutionExplanation": "Guarantees that re-evaluating modules reuses the existing PrismaClient instance.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Check globalObj.prisma ?? new PrismaClientClass()."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Singleton pattern successfully configured!"
+        },
+        {
+          "id": "task-6-2",
+          "title": "Task 2 (Independent): Fix Connection Exhaustion Bug",
+          "description": "Fix an Express route that dangerously calls new PrismaClient() inside the request handler.",
+          "type": "independent",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Remove \"new PrismaClient()\" inside handleRequest",
+            "Use the passed or imported singleton prisma client"
+          ],
+          "initialCode": "// BUG: Instantiating client inside route handler exhausts connections!\nexport async function handleRequest(req: any, res: any) {\n  // Fix: replace with singleton prisma.user.findMany()\n  const users = await prisma.user.findMany();\n  return res.json(users);\n}",
+          "solutionCode": "export async function handleRequest(req: any, res: any) {\n  const users = await prisma.user.findMany();\n  return res.json(users);\n}",
+          "solutionExplanation": "Uses shared singleton client, preventing socket exhaustion.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Do not instantiate new PrismaClient() in the handler."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "findMany"
+          },
+          "successMessage": "Bug eliminated! Database connection pool is now protected."
+        }
+      ]
+    },
+    {
+      "id": "day-06-concept-2",
+      "order": 2,
+      "title": "Query Logging & Graceful Disconnect",
+      "shortDescription": "Configure query telemetry and handle SIGINT / SIGTERM signals cleanly.",
+      "theory": {
+        "summary": "Prisma Client supports rich logging configuration (query, info, warn, error). Setting log: [{ emit: \"event\", level: \"query\" }] lets you inspect query durations. On server termination, calling await prisma.$disconnect() closes open database sockets cleanly.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Logging & Shutdown Pattern",
+          "explanation": "Register event emitter for query durations and graceful disconnect.",
+          "code": "const prisma = new PrismaClient({\n  log: [\n    { emit: 'event', level: 'query' },\n    { emit: 'stdout', level: 'error' }\n  ]\n});\n\nprisma.$on('query', (e) => {\n  console.log(`Query: ${e.query} | Duration: ${e.duration}ms`);\n});"
+        },
+        "explanation": [
+          "Event-based query logging: Ideal for feeding metrics to Datadog, Prometheus, or OpenTelemetry.",
+          "prisma.$disconnect(): Closes the connection pool gracefully when the Node process receives SIGTERM or exits."
+        ],
+        "keyTakeaway": "Always close database pools cleanly when terminating containerized services.",
+        "mcqs": [
+          {
+            "id": "mcq-6-2",
+            "question": "Why should an application invoke \"await prisma.$disconnect()\" on process shutdown?",
+            "options": [
+              "To delete temporary tables created during runtime",
+              "To close active database sockets and prevent lingering idle connections on the database server",
+              "Because Node.js will crash if Prisma is left open",
+              "To automatically run pending migrations"
+            ],
+            "correctIndex": 1,
+            "explanation": "Graceful disconnection terminates open TCP sockets so the database server does not hold zombie connections."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-6-3",
+          "title": "Task 1 (Guided): Instantiate Logged PrismaClient",
+          "description": "Return a configuration object specifying log with emit \"event\" for level \"query\".",
+          "type": "guided",
+          "targetModel": "logger",
+          "activeTab": "editor",
+          "instructions": [
+            "Return an object with log: [{ emit: \"event\", level: \"query\" }]"
+          ],
+          "initialCode": "export function createLoggedClient() {\n  return {\n    log: [{ emit: 'event', level: 'query' }]\n  };\n}",
+          "solutionCode": "export function createLoggedClient() {\n  return {\n    log: [{ emit: 'event', level: 'query' }]\n  };\n}",
+          "solutionExplanation": "Configures event emission for query events.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Specify log: [{ emit: \"event\", level: \"query\" }]."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Query logging configuration confirmed!"
+        },
+        {
+          "id": "task-6-4",
+          "title": "Task 2 (Independent): Register Graceful Disconnect",
+          "description": "Create a process termination listener that calls client.$disconnect() on beforeExit.",
+          "type": "independent",
+          "targetModel": "lifecycle",
+          "activeTab": "editor",
+          "instructions": [
+            "Inside setupGracefulShutdown, invoke client.$disconnect()"
+          ],
+          "initialCode": "export function setupGracefulShutdown(client: any) {\n  // Call client.$disconnect() when process terminates\n  return client.$disconnect();\n}",
+          "solutionCode": "export function setupGracefulShutdown(client: any) {\n  return client.$disconnect();\n}",
+          "solutionExplanation": "Disconnection terminates the client connection pool cleanly.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Return client.$disconnect()."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Graceful shutdown configured!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-06-challenge",
+    "title": "Day 6 Final Challenge: Enterprise Database Gateway",
+    "scenario": "Implement a database health check that executes a fast probe query using prisma.user.findFirst to confirm connectivity.",
+    "tasks": [
+      {
+        "id": "challenge-6-1",
+        "title": "Step 1: Execute Health Probe Query",
+        "description": "Call prisma.user.findFirst to verify database responsiveness.",
+        "type": "challenge",
+        "targetModel": "user",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.user.findFirst",
+          "Select id only"
+        ],
+        "initialCode": "export async function dbHealthCheck() {\n  return await prisma.user.findFirst({\n    select: { id: true }\n  });\n}",
+        "solutionCode": "export async function dbHealthCheck() {\n  return await prisma.user.findFirst({\n    select: { id: true }\n  });\n}",
+        "solutionExplanation": "A lightweight indexed query confirms healthy connectivity.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use findFirst with select: { id: true }."
+          }
+        ],
+        "validation": {
+          "targetModel": "user",
+          "requiredMethod": "findFirst",
+          "requiredFieldsInSelect": [
+            "id"
+          ]
+        },
+        "successMessage": "Day 6 challenge complete! Gateway probe verified."
+      }
+    ]
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "id": "day-09",
+  "slug": "create-and-zod-validation",
+  "day": 9,
+  "title": "create() + Zod Validation",
+  "shortTitle": "Create & Zod Validation",
+  "milestoneId": "milestone-3",
+  "description": "Safely accept user input, validate payloads with Zod schemas, and persist single and batch records with create() and createMany().",
+  "estimatedMinutes": 50,
+  "completionLearnings": [
+    "Mastered single inserts (create) and batched high-throughput inserts (createMany with skipDuplicates: true)",
+    "Defined runtime validation contracts with Zod schemas before data ever touches the database",
+    "Inferred TypeScript types directly from Zod schemas with z.infer<typeof Schema>"
+  ],
+  "concepts": [
+    {
+      "id": "day-09-concept-1",
+      "order": 1,
+      "title": "Inserting Data (create(), createMany())",
+      "shortDescription": "Persist records safely into the database with single and batch inserts.",
+      "theory": {
+        "summary": "prisma.model.create({ data: { ... } }) creates a single record and returns the newly inserted object with auto-generated IDs and timestamps. createMany({ data: [...], skipDuplicates: true }) inserts multiple rows in a single batch INSERT statement.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Data Creation Query",
+          "explanation": "Single record creation returning the persisted user object.",
+          "code": "const newUser = await prisma.user.create({\n  data: {\n    email: 'newuser@prisma.io',\n    name: 'Taylor Developer'\n  }\n});"
+        },
+        "explanation": [
+          "Single write (create): Performs INSERT INTO ... RETURNING *. Returns the fully populated entity.",
+          "Batch write (createMany): Performs a multi-row INSERT INTO ... VALUES (...), (...). Extremely fast for migrations and bulk CSV imports."
+        ],
+        "keyTakeaway": "Use createMany for high-throughput imports and create when you need the returned inserted object.",
+        "mcqs": [
+          {
+            "id": "mcq-9-1",
+            "question": "Why does \"prisma.model.createMany\" not return the full array of created objects in standard PostgreSQL?",
+            "options": [
+              "Because Prisma forbids reading data during writes",
+              "Because createMany optimizes for batch speed, returning { count: N } rather than hydrating entire object graphs",
+              "Because SQL does not support INSERT statements",
+              "Because TypeScript arrays cannot hold more than 10 items"
+            ],
+            "correctIndex": 1,
+            "explanation": "createMany returns a count object { count: number } for peak performance."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-9-1",
+          "title": "Task 1 (Guided): Create Category Record",
+          "description": "Insert a new Category record with name and slug using prisma.category.create.",
+          "type": "guided",
+          "targetModel": "category",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.category.create",
+            "Pass data: { name, slug }"
+          ],
+          "initialCode": "export async function createCategory(name: string, slug: string) {\n  return await prisma.category.create({\n    // Fill data\n  });\n}",
+          "solutionCode": "export async function createCategory(name: string, slug: string) {\n  return await prisma.category.create({\n    data: { name, slug }\n  });\n}",
+          "solutionExplanation": "Calls category.create passing the name and slug payload.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use data: { name, slug }."
+            }
+          ],
+          "validation": {
+            "targetModel": "category",
+            "requiredMethod": "create"
+          },
+          "successMessage": "Category created successfully!"
+        },
+        {
+          "id": "task-9-2",
+          "title": "Task 2 (Independent): Bulk Insert Tags with skipDuplicates",
+          "description": "Bulk insert an array of tags using createMany with skipDuplicates: true.",
+          "type": "independent",
+          "targetModel": "tag",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.tag.createMany",
+            "Set data: tags and skipDuplicates: true"
+          ],
+          "initialCode": "export async function importTags(tags: { name: string }[]) {\n  // Use createMany to insert tags without failing on duplicate names\n}",
+          "solutionCode": "export async function importTags(tags: { name: string }[]) {\n  return await prisma.tag.createMany({\n    data: tags,\n    skipDuplicates: true\n  });\n}",
+          "solutionExplanation": "createMany with skipDuplicates avoids failing on existing tag names.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Pass data: tags and skipDuplicates: true to tag.createMany."
+            }
+          ],
+          "validation": {
+            "targetModel": "tag",
+            "requiredMethod": "createMany"
+          },
+          "successMessage": "Bulk tags inserted with conflict protection!"
+        }
+      ]
+    },
+    {
+      "id": "day-09-concept-2",
+      "order": 2,
+      "title": "Validating Input Payloads with Zod",
+      "shortDescription": "Never trust user input. Validate runtime payloads with Zod before writing to DB.",
+      "theory": {
+        "summary": "ORMs guarantee database schema types, but they do NOT validate runtime user input (e.g. valid emails, password lengths, or positive quantities). Zod validates payloads at the HTTP layer, ensuring only clean data reaches Prisma.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Runtime Validation Schema",
+          "explanation": "Zod parses input at the HTTP boundary, inferring the TypeScript contract.",
+          "code": "import { z } from 'zod';\n\nexport const CreateUserSchema = z.object({\n  email: z.string().email(),\n  age: z.number().int().min(18),\n  role: z.enum(['USER', 'ADMIN']).default('USER')\n});\n\nexport type CreateUserInput = z.infer<typeof CreateUserSchema>;"
+        },
+        "explanation": [
+          "Schema.parse(rawBody): Throws a ZodError if any field fails validation, returning field-level issue details.",
+          "Type Safety: z.infer<typeof Schema> generates the exact TypeScript interface automatically."
+        ],
+        "keyTakeaway": "Always parse API inputs with Zod before calling prisma.model.create.",
+        "mcqs": [
+          {
+            "id": "mcq-9-2",
+            "question": "What is the role of Zod when paired with Prisma in a web application?",
+            "options": [
+              "Zod connects to the PostgreSQL database",
+              "Zod validates incoming client request bodies at runtime before database operations occur",
+              "Zod replaces schema.prisma",
+              "Zod manages database migrations"
+            ],
+            "correctIndex": 1,
+            "explanation": "Zod guards the API boundary by rejecting malformed payloads before Prisma queries run."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-9-3",
+          "title": "Task 1 (Guided): Define CreateProductSchema with Zod",
+          "description": "Define CreateProductSchema requiring title (min 3 chars), positive price (number), and optional sku.",
+          "type": "guided",
+          "targetModel": "zod",
+          "activeTab": "editor",
+          "instructions": [
+            "title: z.string().min(3)",
+            "price: z.number().positive()",
+            "sku: z.string().optional()"
+          ],
+          "initialCode": "import { z } from 'zod';\n\nexport const CreateProductSchema = z.object({\n  // Define schema fields here\n  title: z.string().min(3),\n  price: z.number().positive(),\n  sku: z.string().optional()\n});",
+          "solutionCode": "import { z } from 'zod';\n\nexport const CreateProductSchema = z.object({\n  title: z.string().min(3),\n  price: z.number().positive(),\n  sku: z.string().optional()\n});",
+          "solutionExplanation": "Zod validates title length and positive price.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use title: z.string().min(3) and price: z.number().positive()."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Product schema defined with strict constraints!"
+        },
+        {
+          "id": "task-9-4",
+          "title": "Task 2 (Independent): Parse Input and Persist Product",
+          "description": "Parse rawBody with CreateProductSchema and pass the validated data to prisma.product.create.",
+          "type": "independent",
+          "targetModel": "product",
+          "activeTab": "editor",
+          "instructions": [
+            "const validated = CreateProductSchema.parse(rawBody)",
+            "return await prisma.product.create({ data: validated })"
+          ],
+          "initialCode": "export async function handleCreateProduct(rawBody: unknown) {\n  // 1. Validate rawBody with CreateProductSchema\n  // 2. Insert into DB and return created product\n}",
+          "solutionCode": "export async function handleCreateProduct(rawBody: unknown) {\n  const CreateProductSchema = z.object({\n    title: z.string().min(3),\n    price: z.number().positive(),\n    sku: z.string().optional()\n  });\n  const validatedData = CreateProductSchema.parse(rawBody);\n  return await prisma.product.create({\n    data: validatedData\n  });\n}",
+          "solutionExplanation": "Combines Zod validation with Prisma create in a clean handler.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Parse rawBody and pass result as data in prisma.product.create."
+            }
+          ],
+          "validation": {
+            "targetModel": "product",
+            "requiredMethod": "create"
+          },
+          "successMessage": "Safe creation handler implemented!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-09-challenge",
+    "title": "Day 9 Final Challenge: Secure User Registration Pipeline",
+    "scenario": "Create a user registration function that validates email and name, then inserts the user record.",
+    "tasks": [
+      {
+        "id": "challenge-9-1",
+        "title": "Step 1: Validate and Create User",
+        "description": "Insert user with email and name using prisma.user.create.",
+        "type": "challenge",
+        "targetModel": "user",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.user.create",
+          "data: { email, name }"
+        ],
+        "initialCode": "export async function registerUser(email: string, name: string) {\n  return await prisma.user.create({\n    data: { email, name }\n  });\n}",
+        "solutionCode": "export async function registerUser(email: string, name: string) {\n  return await prisma.user.create({\n    data: { email, name }\n  });\n}",
+        "solutionExplanation": "Safely creates a new user record.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use prisma.user.create({ data: { email, name } })."
+          }
+        ],
+        "validation": {
+          "targetModel": "user",
+          "requiredMethod": "create"
+        },
+        "successMessage": "Day 9 challenge complete! Registration workflow verified."
+      }
+    ]
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "id": "day-10",
+  "slug": "updates-and-upserts",
+  "day": 10,
+  "title": "update(), updateMany() & upsert()",
+  "shortTitle": "Updates & Upserts",
+  "milestoneId": "milestone-3",
+  "description": "Handle real update workflows, prevent race conditions with atomic numeric operations, apply bulk updates, and master idempotent upserts.",
+  "estimatedMinutes": 45,
+  "completionLearnings": [
+    "Used atomic numeric operators (increment, decrement) to eliminate race conditions in concurrent traffic",
+    "Applied bulk updates with updateMany across filtered sets of rows",
+    "Mastered the upsert pattern for page views, settings, and idempotent synchronizations"
+  ],
+  "concepts": [
+    {
+      "id": "day-10-concept-1",
+      "order": 1,
+      "title": "Updating Single Records & Atomic Numeric Operations",
+      "shortDescription": "Prevent lost updates and race conditions using atomic database increments.",
+      "theory": {
+        "summary": "In concurrent environments (e.g. 50 users buying an item simultaneously), reading stock, calculating stock - 1 in JavaScript, and writing it back causes \"lost updates\". Prisma atomic operators (increment, decrement, multiply, divide) execute directly in SQL (SET stock = stock - 1), guaranteeing thread safety.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Atomic Update Pattern",
+          "explanation": "Atomic increment prevents race conditions by running entirely in the database engine.",
+          "code": "// Atomic increment prevents lost updates in concurrent environments\nconst post = await prisma.post.update({\n  where: { id: 42 },\n  data: {\n    views: { increment: 1 },\n    title: 'Updated Title'\n  }\n});"
+        },
+        "explanation": [
+          "Race condition risk: Two requests read views: 10 at the same time. Both write views: 11. One view is lost!",
+          "Atomic solution: views: { increment: 1 } translates to UPDATE posts SET views = views + 1 WHERE id = 42."
+        ],
+        "keyTakeaway": "Always use { increment } / { decrement } for counters and inventory balances.",
+        "mcqs": [
+          {
+            "id": "mcq-10-1",
+            "question": "Why should you use \"{ stock: { decrement: 1 } }\" instead of \"data: { stock: currentStock - 1 }\"?",
+            "options": [
+              "To prevent race conditions where concurrent requests overwrite each other",
+              "Because Prisma does not allow numbers in data",
+              "Because decrement runs faster than JavaScript arithmetic",
+              "To bypass foreign key checks"
+            ],
+            "correctIndex": 0,
+            "explanation": "Atomic operations are evaluated by the SQL engine in a single atomic step, eliminating race conditions."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-10-1",
+          "title": "Task 1 (Guided): Update Customer Email by ID",
+          "description": "Update customer email by their primary key id using prisma.customer.update.",
+          "type": "guided",
+          "targetModel": "customer",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.customer.update",
+            "where: { id }",
+            "data: { email: newEmail }"
+          ],
+          "initialCode": "export async function updateCustomerEmail(id: number, newEmail: string) {\n  return await prisma.customer.update({\n    // Update customer email\n  });\n}",
+          "solutionCode": "export async function updateCustomerEmail(id: number, newEmail: string) {\n  return await prisma.customer.update({\n    where: { id },\n    data: { email: newEmail }\n  });\n}",
+          "solutionExplanation": "Updates email for customer matching id.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "where: { id }, data: { email: newEmail }."
+            }
+          ],
+          "validation": {
+            "targetModel": "customer",
+            "requiredMethod": "update",
+            "requiredWhereClauses": [
+              "id"
+            ]
+          },
+          "successMessage": "Customer email updated successfully!"
+        },
+        {
+          "id": "task-10-2",
+          "title": "Task 2 (Independent): Atomically Decrement Product Stock",
+          "description": "Atomically decrement product stock by quantity upon purchase.",
+          "type": "independent",
+          "targetModel": "product",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.product.update",
+            "where: { id: productId }",
+            "data: { stock: { decrement: quantity } }"
+          ],
+          "initialCode": "export async function purchaseItem(productId: number, quantity: number) {\n  // Atomically decrement stock\n}",
+          "solutionCode": "export async function purchaseItem(productId: number, quantity: number) {\n  return await prisma.product.update({\n    where: { id: productId },\n    data: {\n      stock: { decrement: quantity }\n    }\n  });\n}",
+          "solutionExplanation": "Executes atomic stock decrement safely in the database.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Set stock: { decrement: quantity } in data."
+            }
+          ],
+          "validation": {
+            "targetModel": "product",
+            "requiredMethod": "update",
+            "requiredWhereClauses": [
+              "id"
+            ]
+          },
+          "successMessage": "Inventory atomically decremented without race conditions!"
+        }
+      ]
+    },
+    {
+      "id": "day-10-concept-2",
+      "order": 2,
+      "title": "Idempotent Workflows with upsert()",
+      "shortDescription": "Update if exists, insert if missing in one atomic query.",
+      "theory": {
+        "summary": "upsert checks for the existence of a row by a unique constraint. If the row exists, it applies update: { ... }; if not, it executes create: { ... }.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Upsert Operation Blueprint",
+          "explanation": "Ensures user preference exists and updates theme setting.",
+          "code": "const userSetting = await prisma.userSetting.upsert({\n  where: { userId: 10 },\n  update: { theme: 'DARK' },\n  create: { userId: 10, theme: 'DARK', notifications: true }\n});"
+        },
+        "explanation": [
+          "where: Must be a unique field or composite unique key.",
+          "update: Partial or full fields to update.",
+          "create: Full payload to create if nonexistent."
+        ],
+        "keyTakeaway": "Use upsert for user preferences, analytics counters, and webhook idempotency.",
+        "mcqs": [
+          {
+            "id": "mcq-10-2",
+            "question": "Which clause in \"prisma.model.upsert\" dictates how existing rows are located?",
+            "options": [
+              "filter",
+              "where (must target an @id or @unique field)",
+              "findClause",
+              "target"
+            ],
+            "correctIndex": 1,
+            "explanation": "upsert requires an indexed unique field in where to determine if update or create should be executed."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-10-3",
+          "title": "Task 1 (Guided): Upsert User Notification Preference",
+          "description": "Implement setPreference(userId, emailNotify) using prisma.userPreference.upsert.",
+          "type": "guided",
+          "targetModel": "userPreference",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.userPreference.upsert",
+            "where: { userId }",
+            "update: { emailNotify }",
+            "create: { userId, emailNotify }"
+          ],
+          "initialCode": "export async function setPreference(userId: number, emailNotify: boolean) {\n  return await prisma.userPreference.upsert({\n    // Complete upsert\n  });\n}",
+          "solutionCode": "export async function setPreference(userId: number, emailNotify: boolean) {\n  return await prisma.userPreference.upsert({\n    where: { userId },\n    update: { emailNotify },\n    create: { userId, emailNotify }\n  });\n}",
+          "solutionExplanation": "Creates or updates notification preference atomically.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "where: { userId }, update: { emailNotify }, create: { userId, emailNotify }."
+            }
+          ],
+          "validation": {
+            "targetModel": "userPreference",
+            "requiredMethod": "upsert",
+            "requiredWhereClauses": [
+              "userId"
+            ]
+          },
+          "successMessage": "User preference successfully upserted!"
+        },
+        {
+          "id": "task-10-4",
+          "title": "Task 2 (Independent): Record Page View with Atomic Upsert",
+          "description": "Upsert page view: if pagePath exists, increment views by 1; if not, create with views = 1.",
+          "type": "independent",
+          "targetModel": "pageView",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.pageView.upsert",
+            "where: { path: pagePath }",
+            "update: { views: { increment: 1 } }",
+            "create: { path: pagePath, views: 1 }"
+          ],
+          "initialCode": "export async function recordPageView(pagePath: string) {\n  // Upsert: if pagePath exists, increment views by 1; if not, create with views = 1\n}",
+          "solutionCode": "export async function recordPageView(pagePath: string) {\n  return await prisma.pageView.upsert({\n    where: { path: pagePath },\n    update: { views: { increment: 1 } },\n    create: { path: pagePath, views: 1 }\n  });\n}",
+          "solutionExplanation": "Pairs upsert with atomic increment for bulletproof view counting.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use update: { views: { increment: 1 } } and create: { path: pagePath, views: 1 }."
+            }
+          ],
+          "validation": {
+            "targetModel": "pageView",
+            "requiredMethod": "upsert",
+            "requiredWhereClauses": [
+              "path"
+            ]
+          },
+          "successMessage": "Page view recorder successfully constructed!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-10-challenge",
+    "title": "Day 10 Final Challenge: Inventory Reconciliation",
+    "scenario": "Implement a quantity increment on Product matching productId using atomic increment.",
+    "tasks": [
+      {
+        "id": "challenge-10-1",
+        "title": "Step 1: Increment Product Stock",
+        "description": "Increment stock on Product by addedQty.",
+        "type": "challenge",
+        "targetModel": "product",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.product.update",
+          "where: { id: productId }",
+          "data: { stock: { increment: addedQty } }"
+        ],
+        "initialCode": "export async function restockProduct(productId: number, addedQty: number) {\n  return await prisma.product.update({\n    where: { id: productId },\n    data: { stock: { increment: addedQty } }\n  });\n}",
+        "solutionCode": "export async function restockProduct(productId: number, addedQty: number) {\n  return await prisma.product.update({\n    where: { id: productId },\n    data: { stock: { increment: addedQty } }\n  });\n}",
+        "solutionExplanation": "Atomically restocks inventory.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "stock: { increment: addedQty }."
+          }
+        ],
+        "validation": {
+          "targetModel": "product",
+          "requiredMethod": "update",
+          "requiredWhereClauses": [
+            "id"
+          ]
+        },
+        "successMessage": "Day 10 challenge complete! Stock restocked atomically."
+      }
+    ]
+  }
+}

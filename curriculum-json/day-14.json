@@ -1,0 +1,239 @@
+{
+  "id": "day-14",
+  "slug": "production-rest-api",
+  "day": 14,
+  "title": "Production REST API Capstone",
+  "shortTitle": "REST API Capstone",
+  "milestoneId": "milestone-4",
+  "description": "Put everything together to build an enterprise-grade REST API with Express/Next.js, Prisma, Zod, transactions, relations, and centralized error handling.",
+  "estimatedMinutes": 60,
+  "completionLearnings": [
+    "Architected clean multi-tier service layers separating HTTP transport from Prisma queries",
+    "Implemented full CRUD lifecycle: GET feed, POST creation with nested tags, PATCH partial updates, and DELETE with 204 status",
+    "Mastered the end-to-end production database engineering workflow with Prisma v7"
+  ],
+  "concepts": [
+    {
+      "id": "day-14-concept-1",
+      "order": 1,
+      "title": "Clean Architecture Layering (Router -> Controller -> Service)",
+      "shortDescription": "Decouple database logic from HTTP transport using dedicated Service classes.",
+      "theory": {
+        "summary": "In enterprise applications, Prisma calls should live in a dedicated Service layer (e.g. PostService). Route controllers simply parse requests, pass parameters to services, and send HTTP responses. This makes code testable, reusable, and framework-agnostic.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Clean Architecture Service Layer",
+          "explanation": "PostService isolates database operations from Express/Next.js controllers.",
+          "code": "// Service Layer: pure database interaction\nexport class PostService {\n  static async getFeed(cursor?: number, limit = 10) {\n    return await prisma.post.findMany({\n      take: limit,\n      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),\n      include: { author: { select: { id: true, name: true } } },\n      orderBy: { createdAt: 'desc' }\n    });\n  }\n}"
+        },
+        "explanation": [
+          "Separation of Concerns: Controllers handle req/res and status codes. Services handle Prisma queries and transactions.",
+          "Maintainability: Switching from Express to Fastify or Next.js requires zero changes to your Prisma Service layer."
+        ],
+        "keyTakeaway": "Encapsulate Prisma queries inside Service classes to keep controllers lean.",
+        "mcqs": [
+          {
+            "id": "mcq-14-1",
+            "question": "Why should database queries be placed inside Service classes rather than directly inside route handlers?",
+            "options": [
+              "Express crashes if you call Prisma inside routes",
+              "Service classes decouple database operations from HTTP frameworks, improving testability and code reuse",
+              "Service classes run queries in separate CPU threads",
+              "Prisma only works inside classes"
+            ],
+            "correctIndex": 1,
+            "explanation": "Decoupling database queries from HTTP transport allows testing business logic without mocking Express request/response objects."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-14-1",
+          "title": "Task 1 (Guided): Assemble PostService.getFeed",
+          "description": "Implement PostService.getFeed supporting cursor pagination, author selection, and descending order.",
+          "type": "guided",
+          "targetModel": "post",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.post.findMany",
+            "take: limit",
+            "include: { author: { select: { id: true, name: true } } }",
+            "orderBy: { createdAt: \"desc\" }"
+          ],
+          "initialCode": "export class PostService {\n  static async getFeed(cursor?: number, limit = 10) {\n    return await prisma.post.findMany({\n      take: limit,\n      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),\n      include: { author: { select: { id: true, name: true } } },\n      orderBy: { createdAt: 'desc' }\n    });\n  }\n}",
+          "solutionCode": "export class PostService {\n  static async getFeed(cursor?: number, limit = 10) {\n    return await prisma.post.findMany({\n      take: limit,\n      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),\n      include: { author: { select: { id: true, name: true } } },\n      orderBy: { createdAt: 'desc' }\n    });\n  }\n}",
+          "solutionExplanation": "Assembles production-ready feed retrieval service.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use prisma.post.findMany with author select and cursor logic."
+            }
+          ],
+          "validation": {
+            "targetModel": "post",
+            "requiredMethod": "findMany",
+            "requiredIncludes": [
+              "author"
+            ]
+          },
+          "successMessage": "PostService.getFeed successfully assembled!"
+        },
+        {
+          "id": "task-14-2",
+          "title": "Task 2 (Independent): Implement PostService.createPost with Tags",
+          "description": "Create post with title, authorId, and nested tags in PostService.",
+          "type": "independent",
+          "targetModel": "post",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.post.create",
+            "data: { title, authorId, tags: { create: tagNames.map(name => ({ name })) } }",
+            "include: { tags: true }"
+          ],
+          "initialCode": "export class PostService {\n  static async createPost(authorId: number, title: string, tagNames: string[]) {\n    return await prisma.post.create({\n      data: {\n        title,\n        authorId,\n        tags: {\n          create: tagNames.map((name) => ({ name }))\n        }\n      },\n      include: { tags: true }\n    });\n  }\n}",
+          "solutionCode": "export class PostService {\n  static async createPost(authorId: number, title: string, tagNames: string[]) {\n    return await prisma.post.create({\n      data: {\n        title,\n        authorId,\n        tags: {\n          create: tagNames.map((name) => ({ name }))\n        }\n      },\n      include: { tags: true }\n    });\n  }\n}",
+          "solutionExplanation": "Creates post with nested tag records.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use tags: { create: tagNames.map(...) }."
+            }
+          ],
+          "validation": {
+            "targetModel": "post",
+            "requiredMethod": "create"
+          },
+          "successMessage": "PostService.createPost with nested tags implemented!"
+        }
+      ]
+    },
+    {
+      "id": "day-14-concept-2",
+      "order": 2,
+      "title": "Full CRUD Lifecycle & Relational Integrity",
+      "shortDescription": "Tie together HTTP status codes (200, 201, 204, 400, 404, 409) with Prisma operations.",
+      "theory": {
+        "summary": "A production REST API pairs HTTP semantics with Prisma methods: GET -> 200 OK (findMany/findUnique), POST -> 201 Created (create with Zod), PATCH -> 200 OK (update with atomic counters), and DELETE -> 204 No Content (delete with cascade safety).",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Atomic Controller Endpoint",
+          "explanation": "PATCH endpoint that updates views using atomic database increment.",
+          "code": "// PATCH /api/posts/:id/view - atomic view counter increment\nrouter.patch('/posts/:id/view', async (req, res, next) => {\n  try {\n    const updated = await prisma.post.update({\n      where: { id: Number(req.params.id) },\n      data: { views: { increment: 1 } }\n    });\n    res.json(updated);\n  } catch (err) { next(err); }\n});"
+        },
+        "explanation": [
+          "204 No Content: Proper HTTP status for successful DELETE operations.",
+          "Next(err): Forwards any database exceptions directly to centralized error middleware."
+        ],
+        "keyTakeaway": "Pair correct HTTP status codes with corresponding Prisma CRUD operations.",
+        "mcqs": [
+          {
+            "id": "mcq-14-2",
+            "question": "Which HTTP status code should be returned after a successful DELETE operation?",
+            "options": [
+              "200 OK or 204 No Content",
+              "201 Created",
+              "301 Moved Permanently",
+              "500 Internal Server Error"
+            ],
+            "correctIndex": 0,
+            "explanation": "204 No Content indicates successful deletion with an empty response body."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-14-3",
+          "title": "Task 1 (Guided): Delete Controller Handler (204 No Content)",
+          "description": "Write deletePostHandler(req, res, next) deleting post and returning res.status(204).send().",
+          "type": "guided",
+          "targetModel": "post",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.post.delete where id: Number(req.params.id)",
+            "Return res.status(204).send()",
+            "Forward errors via next(err)"
+          ],
+          "initialCode": "export async function deletePostHandler(req: any, res: any, next: any) {\n  try {\n    await prisma.post.delete({\n      where: { id: Number(req.params.id) }\n    });\n    return res.status(204).send();\n  } catch (err) {\n    next(err);\n  }\n}",
+          "solutionCode": "export async function deletePostHandler(req: any, res: any, next: any) {\n  try {\n    await prisma.post.delete({\n      where: { id: Number(req.params.id) }\n    });\n    return res.status(204).send();\n  } catch (err) {\n    next(err);\n  }\n}",
+          "solutionExplanation": "Executes delete and returns clean 204 status.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use res.status(204).send()."
+            }
+          ],
+          "validation": {
+            "targetModel": "post",
+            "requiredMethod": "delete"
+          },
+          "successMessage": "Delete handler returning 204 successfully completed!"
+        },
+        {
+          "id": "task-14-4",
+          "title": "Task 2 (Independent): Update Post Controller Handler",
+          "description": "Implement updatePostHandler(req, res, next) updating post title and returning 200 JSON.",
+          "type": "independent",
+          "targetModel": "post",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.post.update where id: Number(req.params.id)",
+            "data: req.body",
+            "Return res.status(200).json(updated)"
+          ],
+          "initialCode": "export async function updatePostHandler(req: any, res: any, next: any) {\n  try {\n    const updated = await prisma.post.update({\n      where: { id: Number(req.params.id) },\n      data: req.body\n    });\n    return res.status(200).json(updated);\n  } catch (err) {\n    next(err);\n  }\n}",
+          "solutionCode": "export async function updatePostHandler(req: any, res: any, next: any) {\n  try {\n    const updated = await prisma.post.update({\n      where: { id: Number(req.params.id) },\n      data: req.body\n    });\n    return res.status(200).json(updated);\n  } catch (err) {\n    next(err);\n  }\n}",
+          "solutionExplanation": "Updates post by id and returns 200 with updated entity.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use prisma.post.update and return res.status(200).json(updated)."
+            }
+          ],
+          "validation": {
+            "targetModel": "post",
+            "requiredMethod": "update"
+          },
+          "successMessage": "Update controller handler successfully implemented!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-14-challenge",
+    "title": "Day 14 Capstone Project: Enterprise Publishing REST API",
+    "scenario": "Complete the final capstone: query the publishing platform feed with author select, comments count, and views counter.",
+    "tasks": [
+      {
+        "id": "challenge-14-1",
+        "title": "Capstone Step: Build Feed with Relations and Analytics",
+        "description": "Fetch published posts including author (id, name) and comments.",
+        "type": "challenge",
+        "targetModel": "post",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.post.findMany",
+          "where: { published: true }",
+          "include: { author: { select: { id: true, name: true } }, comments: true }"
+        ],
+        "initialCode": "export async function getCapstoneFeed() {\n  return await prisma.post.findMany({\n    where: { published: true },\n    include: {\n      author: { select: { id: true, name: true } },\n      comments: true\n    }\n  });\n}",
+        "solutionCode": "export async function getCapstoneFeed() {\n  return await prisma.post.findMany({\n    where: { published: true },\n    include: {\n      author: { select: { id: true, name: true } },\n      comments: true\n    }\n  });\n}",
+        "solutionExplanation": "The capstone query: loads author relation with scalar pruning and comments list.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use findMany with where: { published: true } and author/comments includes."
+          }
+        ],
+        "validation": {
+          "targetModel": "post",
+          "requiredMethod": "findMany",
+          "requiredIncludes": [
+            "author",
+            "comments"
+          ]
+        },
+        "successMessage": "CONGRATULATIONS! You have mastered Prisma ORM and production database engineering!"
+      }
+    ]
+  }
+}

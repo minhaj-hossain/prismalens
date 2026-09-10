@@ -1,0 +1,56 @@
+[
+  {
+    "id": "milestone-1",
+    "number": 1,
+    "title": "Foundations & Schema Modeling",
+    "subtitle": "From Raw SQL to Relational Schemas",
+    "description": "Master the database problems ORMs solve, Prisma v7 setup, declarative schema design, native types, constraints, and all relational patterns (1:1, 1:N, M:N).",
+    "daysRange": "Days 1 – 4",
+    "moduleIds": [
+      "day-01",
+      "day-02",
+      "day-03",
+      "day-04"
+    ]
+  },
+  {
+    "id": "milestone-2",
+    "number": 2,
+    "title": "Migrations, Operations & Controlled Reads",
+    "subtitle": "Database Evolution & Optimized Querying",
+    "description": "Safely evolve schemas with migrations and seeders, manage connection pools and client singletons, and build precise read queries with select, include, filters, and pagination.",
+    "daysRange": "Days 5 – 8",
+    "moduleIds": [
+      "day-05",
+      "day-06",
+      "day-07",
+      "day-08"
+    ]
+  },
+  {
+    "id": "milestone-3",
+    "number": 3,
+    "title": "Mutations, Data Integrity & Transactions",
+    "subtitle": "ACID Guarantees & Safe Writes",
+    "description": "Safely accept user input with Zod, execute atomic updates and idempotent upserts, configure referential cascade actions, and master nested writes with ACID transactions.",
+    "daysRange": "Days 9 – 12",
+    "moduleIds": [
+      "day-09",
+      "day-10",
+      "day-11",
+      "day-12"
+    ]
+  },
+  {
+    "id": "milestone-4",
+    "number": 4,
+    "title": "Production REST APIs & Resilience",
+    "subtitle": "Enterprise Architecture & Hardening",
+    "description": "Intercept Prisma error codes without leaking database internals, build robust Express error middleware, and architect a complete production-grade publishing REST API.",
+    "daysRange": "Days 13 – 14",
+    "moduleIds": [
+      "day-13",
+      "day-14"
+    ]
+  }
+]

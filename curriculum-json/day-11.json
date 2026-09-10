@@ -1,0 +1,233 @@
+{
+  "id": "day-11",
+  "slug": "delete-referential-actions",
+  "day": 11,
+  "title": "Delete & Referential Actions",
+  "shortTitle": "Deletes & Cascade Actions",
+  "milestoneId": "milestone-3",
+  "description": "Understand data integrity upon deletion, cascade deletes vs foreign key protection, referential action rules, and the soft-delete pattern.",
+  "estimatedMinutes": 45,
+  "completionLearnings": [
+    "Configured referential actions: onDelete: Cascade vs SetNull vs Restrict in schema.prisma",
+    "Understood how cascade deletes protect applications from orphaned records",
+    "Implemented the soft-delete pattern with deletedAt timestamps for compliance and data recovery"
+  ],
+  "concepts": [
+    {
+      "id": "day-11-concept-1",
+      "order": 1,
+      "title": "Referential Actions (onDelete: Cascade, SetNull, Restrict)",
+      "shortDescription": "Control what happens to child records when a parent entity is deleted.",
+      "theory": {
+        "summary": "When a record is deleted, foreign keys dictate child behavior: Cascade deletes all child rows automatically. SetNull sets the child foreign key to null (requires optional foreign key). Restrict blocks parent deletion if child records exist.",
+        "targetHero": {
+          "language": "prisma",
+          "badge": "Referential Action Blueprint",
+          "explanation": "Setting onDelete: Cascade on Comment automatically purges comments when parent Post is deleted.",
+          "code": "model Post {\n  id       Int       @id @default(autoincrement())\n  authorId Int?\n  author   User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)\n  comments Comment[] // Comments configure onDelete: Cascade in Comment model\n}\n\nmodel Comment {\n  id     Int  @id @default(autoincrement())\n  postId Int\n  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)\n}"
+        },
+        "explanation": [
+          "onDelete: Cascade: Best for tight compositions (e.g. Order and OrderItems).",
+          "onDelete: SetNull: Best when child should survive parent removal (e.g. Article author is deleted, but article remains).",
+          "onDelete: Restrict: Prevents accidental deletions (e.g. cannot delete a User who has active Orders)."
+        ],
+        "keyTakeaway": "Always configure explicit onDelete rules to prevent database foreign key constraint violations.",
+        "mcqs": [
+          {
+            "id": "mcq-11-1",
+            "question": "What happens when a User is deleted if their Posts have \"onDelete: Restrict\"?",
+            "options": [
+              "The user and all their posts are deleted",
+              "The database rejects the deletion with a foreign key constraint violation error (P2003)",
+              "The posts are reassigned to an admin",
+              "The posts become null"
+            ],
+            "correctIndex": 1,
+            "explanation": "Restrict physically blocks deletion of the parent as long as child records reference it."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-11-1",
+          "title": "Task 1 (Guided): Configure onDelete: Cascade on OrderItem",
+          "description": "Configure onDelete: Cascade on the OrderItem -> Order relation.",
+          "type": "guided",
+          "targetModel": "OrderItem",
+          "activeTab": "schema",
+          "instructions": [
+            "In model OrderItem, add onDelete: Cascade to the order relation"
+          ],
+          "initialCode": "model OrderItem {\n  id      Int   @id @default(autoincrement())\n  orderId Int\n  order   Order @relation(fields: [orderId], references: [id])\n  // Add onDelete: Cascade\n}",
+          "solutionCode": "model OrderItem {\n  id      Int   @id @default(autoincrement())\n  orderId Int\n  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)\n}",
+          "solutionExplanation": "Adds onDelete: Cascade so deleting an Order deletes its items automatically.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Append \", onDelete: Cascade\" inside @relation(...)."
+            }
+          ],
+          "validation": {
+            "targetModel": "OrderItem"
+          },
+          "successMessage": "Cascade deletion successfully configured!"
+        },
+        {
+          "id": "task-11-2",
+          "title": "Task 2 (Independent): Configure onDelete: SetNull on Article Author",
+          "description": "Set onDelete: SetNull on Author relation in Article so articles remain if Author is deleted.",
+          "type": "independent",
+          "targetModel": "Article",
+          "activeTab": "schema",
+          "instructions": [
+            "Add onDelete: SetNull inside @relation for author in Article"
+          ],
+          "initialCode": "model Article {\n  id       Int     @id @default(autoincrement())\n  authorId Int?\n  author   Author? @relation(fields: [authorId], references: [id])\n  // Configure onDelete: SetNull\n}",
+          "solutionCode": "model Article {\n  id       Int     @id @default(autoincrement())\n  authorId Int?\n  author   Author? @relation(fields: [authorId], references: [id], onDelete: SetNull)\n}",
+          "solutionExplanation": "SetNull nullifies authorId when Author is removed.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Add onDelete: SetNull to @relation."
+            }
+          ],
+          "validation": {
+            "targetModel": "Article"
+          },
+          "successMessage": "SetNull referential action configured!"
+        }
+      ]
+    },
+    {
+      "id": "day-11-concept-2",
+      "order": 2,
+      "title": "The Soft Deletion Pattern",
+      "shortDescription": "Protect audit trails and GDPR compliance by setting deletedAt instead of physical DELETE.",
+      "theory": {
+        "summary": "Hard deletes permanently remove rows from the database, destroying financial, legal, and activity history. The soft-delete pattern adds deletedAt DateTime? to the schema. \"Deleting\" simply updates deletedAt to now(), and queries filter by where: { deletedAt: null }.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Soft Delete Execution",
+          "explanation": "Updates deletedAt timestamp instead of removing the database row.",
+          "code": "// Soft delete execution\nawait prisma.user.update({\n  where: { id: userId },\n  data: { deletedAt: new Date() }\n});"
+        },
+        "explanation": [
+          "Audit Safety: Deleted users can be restored or referenced by historical billing invoices.",
+          "Prisma Client Extensions: You can create a client extension that automatically appends where: { deletedAt: null } to all read queries."
+        ],
+        "keyTakeaway": "In business-critical databases, soft delete preserves data integrity and financial history.",
+        "mcqs": [
+          {
+            "id": "mcq-11-2",
+            "question": "What is the key advantage of soft deletion over hard physical deletion?",
+            "options": [
+              "Soft delete speeds up SQL queries",
+              "Soft delete preserves audit trails, prevents broken historical foreign keys, and allows undoing mistakes",
+              "Soft delete uses zero disk space",
+              "Prisma does not support hard deletes"
+            ],
+            "correctIndex": 1,
+            "explanation": "Preserving historical rows ensures invoices, logs, and references remain intact."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-11-3",
+          "title": "Task 1 (Guided): Implement Soft Delete Function",
+          "description": "Implement softDeleteUser(id) by updating deletedAt to new Date().",
+          "type": "guided",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.user.update",
+            "where: { id }",
+            "data: { deletedAt: new Date() }"
+          ],
+          "initialCode": "export async function softDeleteUser(id: number) {\n  // Update user setting deletedAt to new Date()\n}",
+          "solutionCode": "export async function softDeleteUser(id: number) {\n  return await prisma.user.update({\n    where: { id },\n    data: { deletedAt: new Date() }\n  });\n}",
+          "solutionExplanation": "Updates deletedAt timestamp rather than deleting the row.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Pass data: { deletedAt: new Date() } to user.update."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "update",
+            "requiredWhereClauses": [
+              "id"
+            ]
+          },
+          "successMessage": "Soft delete executed successfully!"
+        },
+        {
+          "id": "task-11-4",
+          "title": "Task 2 (Independent): Query Active (Non-Deleted) Accounts",
+          "description": "Retrieve accounts strictly filtering where: { deletedAt: null }.",
+          "type": "independent",
+          "targetModel": "account",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.account.findMany",
+            "where: { deletedAt: null }"
+          ],
+          "initialCode": "export async function getActiveAccounts() {\n  // Find all accounts where deletedAt is null\n}",
+          "solutionCode": "export async function getActiveAccounts() {\n  return await prisma.account.findMany({\n    where: { deletedAt: null }\n  });\n}",
+          "solutionExplanation": "Excludes soft-deleted records by checking for null.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Pass where: { deletedAt: null }."
+            }
+          ],
+          "validation": {
+            "targetModel": "account",
+            "requiredMethod": "findMany",
+            "requiredWhereClauses": [
+              "deletedAt"
+            ]
+          },
+          "successMessage": "Active accounts query successfully filtered!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-11-challenge",
+    "title": "Day 11 Final Challenge: Cascade Purge Pipeline",
+    "scenario": "Delete a post and ensure all associated comments are removed via cascade delete.",
+    "tasks": [
+      {
+        "id": "challenge-11-1",
+        "title": "Step 1: Delete Target Post",
+        "description": "Execute prisma.post.delete on post with id 4.",
+        "type": "challenge",
+        "targetModel": "post",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.post.delete",
+          "where: { id: 4 }"
+        ],
+        "initialCode": "export async function deletePostCascade(id: number = 4) {\n  return await prisma.post.delete({\n    where: { id }\n  });\n}",
+        "solutionCode": "export async function deletePostCascade(id: number = 4) {\n  return await prisma.post.delete({\n    where: { id }\n  });\n}",
+        "solutionExplanation": "Performs delete operation on post.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use prisma.post.delete({ where: { id } })."
+          }
+        ],
+        "validation": {
+          "targetModel": "post",
+          "requiredMethod": "delete",
+          "requiredWhereClauses": [
+            "id"
+          ]
+        },
+        "successMessage": "Day 11 challenge complete! Post deleted."
+      }
+    ]
+  }
+}

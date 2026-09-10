@@ -1,0 +1,225 @@
+{
+  "id": "day-13",
+  "slug": "errors-and-middleware",
+  "day": 13,
+  "title": "Errors + Express Error Middleware",
+  "shortTitle": "Errors & Middleware",
+  "milestoneId": "milestone-4",
+  "description": "Intercept Prisma error codes (P2002, P2025), prevent leaking database internals, and build clean Express HTTP error middleware.",
+  "estimatedMinutes": 50,
+  "completionLearnings": [
+    "Identified critical Prisma error codes: P2002 (unique constraint violation), P2025 (record not found), and P2003 (foreign key failure)",
+    "Built centralized Express error middleware mapping database errors to clean HTTP 409, 404, and 400 status responses",
+    "Hardened production APIs to prevent sensitive stack traces and SQL queries leaking to clients"
+  ],
+  "concepts": [
+    {
+      "id": "day-13-concept-1",
+      "order": 1,
+      "title": "Prisma Error Classification & Error Codes",
+      "shortDescription": "Catch Prisma.PrismaClientKnownRequestError and inspect typed error codes.",
+      "theory": {
+        "summary": "When a database operation violates a constraint, Prisma throws a PrismaClientKnownRequestError containing a standardized code. Key production codes include P2002 (Unique constraint failed), P2025 (Record to update/delete not found), and P2003 (Foreign key constraint violation).",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Typed Error Interception",
+          "explanation": "Catches P2002 unique constraint violations and reads target column metadata.",
+          "code": "import { Prisma } from '@prisma/client';\n\ntry {\n  await prisma.user.create({ data: { email: 'duplicate@test.com' } });\n} catch (error) {\n  if (error instanceof Prisma.PrismaClientKnownRequestError) {\n    if (error.code === 'P2002') {\n      console.error(`Unique constraint failed on: ${error.meta?.target}`);\n    }\n  }\n}"
+        },
+        "explanation": [
+          "P2002: Occurs when inserting a duplicate email or SKU. error.meta.target contains the violated field.",
+          "P2025: Occurs when update or delete specifies a where clause matching 0 rows.",
+          "P2003: Occurs when inserting or deleting a row with an invalid foreign key reference."
+        ],
+        "keyTakeaway": "Always check error.code === \"P2002\" rather than inspecting raw error message strings.",
+        "mcqs": [
+          {
+            "id": "mcq-13-1",
+            "question": "Which error code does Prisma throw when a unique constraint is violated (e.g. duplicate email)?",
+            "options": [
+              "P1001",
+              "P2002",
+              "P2025",
+              "SQL_DUPLICATE_KEY"
+            ],
+            "correctIndex": 1,
+            "explanation": "P2002 is the standardized Prisma error code for unique constraint violations."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-13-1",
+          "title": "Task 1 (Guided): Intercept P2002 Duplicate Email Error",
+          "description": "Catch PrismaClientKnownRequestError P2002 when creating a user and return { error: \"Email already taken\" }.",
+          "type": "guided",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Check if error.code === \"P2002\"",
+            "Return { error: \"Email already taken\" }"
+          ],
+          "initialCode": "export async function safeCreateUser(data: { email: string; name: string }) {\n  try {\n    return await prisma.user.create({ data });\n  } catch (error: any) {\n    // Catch P2002 and return { error: \"Email already taken\" }\n    if (error.code === 'P2002') {\n      return { error: 'Email already taken' };\n    }\n    throw error;\n  }\n}",
+          "solutionCode": "export async function safeCreateUser(data: { email: string; name: string }) {\n  try {\n    return await prisma.user.create({ data });\n  } catch (error: any) {\n    if (error.code === 'P2002') {\n      return { error: 'Email already taken' };\n    }\n    throw error;\n  }\n}",
+          "solutionExplanation": "Gracefully handles duplicate email attempts without crashing.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Check if (error.code === \"P2002\")."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "create",
+            "expectedErrorCode": "P2002"
+          },
+          "successMessage": "P2002 error successfully intercepted!"
+        },
+        {
+          "id": "task-13-2",
+          "title": "Task 2 (Independent): Catch P2025 Record Not Found on Delete",
+          "description": "Catch P2025 when deleting a post by ID and return { error: \"Post not found\" } instead of crashing.",
+          "type": "independent",
+          "targetModel": "post",
+          "activeTab": "editor",
+          "instructions": [
+            "Attempt prisma.post.delete where: { id }",
+            "Catch P2025 error and return { error: \"Post not found\" }"
+          ],
+          "initialCode": "export async function safeDeletePost(id: number) {\n  // Handle P2025 record not found\n  try {\n    return await prisma.post.delete({ where: { id } });\n  } catch (error: any) {\n    if (error.code === 'P2025') {\n      return { error: 'Post not found' };\n    }\n    throw error;\n  }\n}",
+          "solutionCode": "export async function safeDeletePost(id: number) {\n  try {\n    return await prisma.post.delete({ where: { id } });\n  } catch (error: any) {\n    if (error.code === 'P2025') {\n      return { error: 'Post not found' };\n    }\n    throw error;\n  }\n}",
+          "solutionExplanation": "Catches P2025 when deleting nonexistent records.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Check error.code === \"P2025\"."
+            }
+          ],
+          "validation": {
+            "targetModel": "post",
+            "requiredMethod": "delete",
+            "expectedErrorCode": "P2025"
+          },
+          "successMessage": "P2025 missing record handled cleanly!"
+        }
+      ]
+    },
+    {
+      "id": "day-13-concept-2",
+      "order": 2,
+      "title": "Centralized Express Error Middleware",
+      "shortDescription": "Decouple route controllers from error formatting with centralized Express middleware.",
+      "theory": {
+        "summary": "Individual API route handlers should never repeat try/catch status code formatting. Centralized Express error middleware (err, req, res, next) intercepts all forwarded errors, converts P2002 to HTTP 409 Conflict, P2025 to HTTP 404 Not Found, and ZodError to HTTP 400 Bad Request.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Production Error Middleware",
+          "explanation": "Central error middleware mapping Prisma codes to HTTP status.",
+          "code": "import { Request, Response, NextFunction } from 'express';\nimport { Prisma } from '@prisma/client';\n\nexport function prismaErrorHandler(err: any, req: Request, res: Response, next: NextFunction) {\n  if (err instanceof Prisma.PrismaClientKnownRequestError) {\n    if (err.code === 'P2002') return res.status(409).json({ error: 'Conflict: Record already exists' });\n    if (err.code === 'P2025') return res.status(404).json({ error: 'Not Found: Target record does not exist' });\n  }\n  return res.status(500).json({ error: 'Internal Server Error' });\n}"
+        },
+        "explanation": [
+          "409 Conflict: Maps from P2002 unique constraint violations.",
+          "404 Not Found: Maps from P2025 missing records.",
+          "400 Bad Request: Maps from Zod payload validation errors."
+        ],
+        "keyTakeaway": "Centralized error middleware guarantees uniform API error contracts across all endpoints.",
+        "mcqs": [
+          {
+            "id": "mcq-13-2",
+            "question": "Which HTTP status code corresponds most accurately to a Prisma P2002 unique constraint violation?",
+            "options": [
+              "200 OK",
+              "400 Bad Request",
+              "409 Conflict",
+              "502 Bad Gateway"
+            ],
+            "correctIndex": 2,
+            "explanation": "HTTP 409 Conflict indicates the request cannot be completed due to a conflict with the current resource state (e.g. duplicate key)."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-13-3",
+          "title": "Task 1 (Guided): Express Error Handler for P2002 and P2025",
+          "description": "Write an Express error handler that converts P2002 into 409 and P2025 into 404.",
+          "type": "guided",
+          "targetModel": "middleware",
+          "activeTab": "editor",
+          "instructions": [
+            "If err.code === \"P2002\", return res.status(409).json({ error: \"Resource already exists\" })",
+            "If err.code === \"P2025\", return res.status(404).json({ error: \"Resource not found\" })",
+            "Default to res.status(500).json({ error: \"Internal server error\" })"
+          ],
+          "initialCode": "export function errorHandler(err: any, req: any, res: any, next: any) {\n  if (err.code === 'P2002') {\n    return res.status(409).json({ error: 'Resource already exists' });\n  }\n  if (err.code === 'P2025') {\n    return res.status(404).json({ error: 'Resource not found' });\n  }\n  return res.status(500).json({ error: 'Internal server error' });\n}",
+          "solutionCode": "export function errorHandler(err: any, req: any, res: any, next: any) {\n  if (err.code === 'P2002') {\n    return res.status(409).json({ error: 'Resource already exists' });\n  }\n  if (err.code === 'P2025') {\n    return res.status(404).json({ error: 'Resource not found' });\n  }\n  return res.status(500).json({ error: 'Internal server error' });\n}",
+          "solutionExplanation": "Maps Prisma errors to standard HTTP status codes.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Check err.code === \"P2002\" and err.code === \"P2025\"."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Express error handler successfully configured!"
+        },
+        {
+          "id": "task-13-4",
+          "title": "Task 2 (Independent): Extend Middleware with Zod 400 Validation",
+          "description": "Extend the middleware to handle Zod validation errors, returning HTTP 400 with issue details.",
+          "type": "independent",
+          "targetModel": "middleware",
+          "activeTab": "editor",
+          "instructions": [
+            "Check if err.name === \"ZodError\" or err instanceof ZodError",
+            "Return res.status(400).json({ error: \"Validation Error\", issues: err.issues })"
+          ],
+          "initialCode": "export function extendedErrorHandler(err: any, req: any, res: any, next: any) {\n  if (err.name === 'ZodError' || err.issues) {\n    return res.status(400).json({ error: 'Validation Error', issues: err.issues });\n  }\n  if (err.code === 'P2002') return res.status(409).json({ error: 'Conflict' });\n  if (err.code === 'P2025') return res.status(404).json({ error: 'Not Found' });\n  return res.status(500).json({ error: 'Internal Server Error' });\n}",
+          "solutionCode": "export function extendedErrorHandler(err: any, req: any, res: any, next: any) {\n  if (err.name === 'ZodError' || err.issues) {\n    return res.status(400).json({ error: 'Validation Error', issues: err.issues });\n  }\n  if (err.code === 'P2002') return res.status(409).json({ error: 'Conflict' });\n  if (err.code === 'P2025') return res.status(404).json({ error: 'Not Found' });\n  return res.status(500).json({ error: 'Internal Server Error' });\n}",
+          "solutionExplanation": "Ensures invalid request payloads return 400 before hitting the database.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Check err.name === \"ZodError\" and return 400."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Extended middleware guards database and client contracts!"
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-13-challenge",
+    "title": "Day 13 Final Challenge: Production API Error Hardening",
+    "scenario": "Implement an end-to-end safe create handler that returns HTTP 409 when a duplicate email occurs.",
+    "tasks": [
+      {
+        "id": "challenge-13-1",
+        "title": "Step 1: Harden User Creation Against Duplicates",
+        "description": "Catch duplicate user creation and return status 409.",
+        "type": "challenge",
+        "targetModel": "user",
+        "activeTab": "editor",
+        "instructions": [
+          "Try to create user",
+          "If error is P2002, return { statusCode: 409, message: \"Duplicate email\" }"
+        ],
+        "initialCode": "export async function hardenedCreateUser(email: string, name: string) {\n  try {\n    return await prisma.user.create({ data: { email, name } });\n  } catch (error: any) {\n    if (error.code === 'P2002') {\n      return { statusCode: 409, message: 'Duplicate email' };\n    }\n    throw error;\n  }\n}",
+        "solutionCode": "export async function hardenedCreateUser(email: string, name: string) {\n  try {\n    return await prisma.user.create({ data: { email, name } });\n  } catch (error: any) {\n    if (error.code === 'P2002') {\n      return { statusCode: 409, message: 'Duplicate email' };\n    }\n    throw error;\n  }\n}",
+        "solutionExplanation": "Shields API consumers with 409 status on duplicate entries.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Catch error and check error.code === \"P2002\"."
+          }
+        ],
+        "validation": {
+          "targetModel": "user",
+          "requiredMethod": "create"
+        },
+        "successMessage": "Day 13 challenge complete! Production error hardening in place."
+      }
+    ]
+  }
+}

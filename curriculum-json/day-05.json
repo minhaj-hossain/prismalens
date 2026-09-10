@@ -1,0 +1,248 @@
+{
+  "id": "day-05",
+  "slug": "migrations-and-seeding",
+  "day": 5,
+  "title": "Migrations + Seeding",
+  "shortTitle": "Migrations & Seeding",
+  "milestoneId": "milestone-2",
+  "description": "Safely evolve database schemas with prisma migrate dev, understand migration SQL files, and build idempotent seeders with prisma/seed.ts.",
+  "estimatedMinutes": 45,
+  "completionLearnings": [
+    "Mastered the difference between migrate dev (diff & create SQL) and migrate deploy (production CI/CD)",
+    "Understood how to safely add non-nullable columns to populated tables using @default",
+    "Built idempotent seeders using upsert to avoid duplicate key errors on repeated runs"
+  ],
+  "concepts": [
+    {
+      "id": "day-05-concept-1",
+      "order": 1,
+      "title": "Prisma Migrate Workflow (migrate dev vs deploy)",
+      "shortDescription": "How Prisma compares schema against database state, writes SQL migrations, and applies them.",
+      "theory": {
+        "summary": "In local development, \"npx prisma migrate dev\" calculates the diff between schema.prisma and your database, writes a timestamped SQL migration file, applies it, and runs prisma generate. In production CI/CD, \"npx prisma migrate deploy\" applies pending migrations without diffing.",
+        "targetHero": {
+          "language": "bash",
+          "badge": "Migration Command Lifecycle",
+          "explanation": "Development command that creates versioned SQL and regenerates TypeScript client.",
+          "code": "# Development: detect changes, create migration SQL, apply, and regenerate client\nnpx prisma migrate dev --name add_user_profiles\n\n# Production CI/CD: apply pending migrations only\nnpx prisma migrate deploy"
+        },
+        "explanation": [
+          "migrate dev: For developers. Compares schema to DB, prompts if data loss might occur, creates SQL file in prisma/migrations, applies it, and updates Prisma Client.",
+          "migrate deploy: For production / Docker / CI. Strictly applies committed SQL migration files; never creates files or touches client generation."
+        ],
+        "keyTakeaway": "Never use migrate dev in production; use migrate deploy.",
+        "mcqs": [
+          {
+            "id": "mcq-5-1",
+            "question": "Which migration command should be executed in your production deployment script?",
+            "options": [
+              "npx prisma migrate dev",
+              "npx prisma migrate deploy",
+              "npx prisma db push --force-reset",
+              "npx prisma format"
+            ],
+            "correctIndex": 1,
+            "explanation": "migrate deploy applies pending migrations safely without interactive prompts or altering files."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-5-1",
+          "title": "Task 1 (Guided): Return Production Migration Command",
+          "description": "Return the exact CLI command used to apply pending migrations in production CI/CD pipelines.",
+          "type": "guided",
+          "targetModel": "cli",
+          "activeTab": "editor",
+          "instructions": [
+            "Return \"npx prisma migrate deploy\" from getProductionMigrationCommand()"
+          ],
+          "initialCode": "export function getProductionMigrationCommand(): string {\n  // Return the command used in production CI/CD pipelines\n  return \"\";\n}",
+          "solutionCode": "export function getProductionMigrationCommand(): string {\n  return \"npx prisma migrate deploy\";\n}",
+          "solutionExplanation": "migrate deploy is designed for automated pipelines.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "The command starts with \"npx prisma migrate ...\"."
+            },
+            {
+              "level": 2,
+              "text": "Use \"npx prisma migrate deploy\"."
+            }
+          ],
+          "validation": {},
+          "successMessage": "Correct! Production deployments require migrate deploy."
+        },
+        {
+          "id": "task-5-2",
+          "title": "Task 2 (Independent): Safely Add Required Column with @default",
+          "description": "Add a non-nullable status column to Order table that already has rows, using @default(\"PENDING\").",
+          "type": "independent",
+          "targetModel": "Order",
+          "activeTab": "schema",
+          "instructions": [
+            "In model Order, add \"status String @default(\"PENDING\")\""
+          ],
+          "initialCode": "// Model has existing production rows. Add required field 'status' safely:\nmodel Order {\n  id     Int    @id @default(autoincrement())\n  amount Decimal\n  // Add status String with default \"PENDING\"\n}",
+          "solutionCode": "model Order {\n  id     Int    @id @default(autoincrement())\n  amount Decimal\n  status String @default(\"PENDING\")\n}",
+          "solutionExplanation": "Adding @default provides values for existing rows so migrations succeed without failing on null constraints.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Add \"status String @default(\\\"PENDING\\\")\"."
+            }
+          ],
+          "validation": {
+            "targetModel": "Order",
+            "requiredFieldsInSelect": [
+              "id",
+              "amount",
+              "status"
+            ]
+          },
+          "successMessage": "Great job! Adding defaults allows safe migrations on populated tables."
+        }
+      ]
+    },
+    {
+      "id": "day-05-concept-2",
+      "order": 2,
+      "title": "Idempotent Seeding with prisma/seed.ts",
+      "shortDescription": "Write reproducible seeds using upsert to prevent unique constraint failures.",
+      "theory": {
+        "summary": "Database seeders populate initial data (roles, super-admins, test fixtures). If a seeder uses create, running it a second time crashes with unique constraint violations. An idempotent seeder uses upsert so it can be run repeatedly without failure.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Idempotent Seed Pattern",
+          "explanation": "Upsert matches on unique identifier; updates if exists, creates if missing.",
+          "code": "// prisma/seed.ts\nawait prisma.role.upsert({\n  where: { name: 'ADMIN' },\n  update: {},\n  create: { name: 'ADMIN', description: 'System Administrator' },\n});"
+        },
+        "explanation": [
+          "where: Unique filter (e.g. email or code).",
+          "update: What to change if already present (pass {} if you want to leave existing rows untouched).",
+          "create: Payload to insert if the record does not exist yet."
+        ],
+        "keyTakeaway": "Always use upsert in seed scripts to ensure re-runnability.",
+        "mcqs": [
+          {
+            "id": "mcq-5-2",
+            "question": "Why is prisma.user.create considered bad practice inside a seed.ts script?",
+            "options": [
+              "create runs 10x slower than upsert",
+              "create will crash with unique constraint errors if the seed script is run more than once",
+              "Prisma forbids create inside files named seed.ts",
+              "create cannot insert strings"
+            ],
+            "correctIndex": 1,
+            "explanation": "create will fail on duplicate unique keys (like email) if the database already contains data."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-5-3",
+          "title": "Task 1 (Guided): Idempotent Admin Seeder",
+          "description": "Write an idempotent seed function using prisma.user.upsert to ensure email \"admin@prisma.io\" exists.",
+          "type": "guided",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.user.upsert",
+            "where: { email: \"admin@prisma.io\" }",
+            "update: {}",
+            "create: { email: \"admin@prisma.io\", name: \"Super Admin\" }"
+          ],
+          "initialCode": "export async function seedAdminUser() {\n  // Use prisma.user.upsert to ensure email 'admin@prisma.io' exists\n  return await prisma.user.upsert({\n    // Complete the upsert query\n  });\n}",
+          "solutionCode": "export async function seedAdminUser() {\n  return await prisma.user.upsert({\n    where: { email: 'admin@prisma.io' },\n    update: {},\n    create: {\n      email: 'admin@prisma.io',\n      name: 'Super Admin',\n    }\n  });\n}",
+          "solutionExplanation": "Upsert ensures running the seed script 100 times never throws a duplicate key error.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "where must match { email: \"admin@prisma.io\" }."
+            },
+            {
+              "level": 2,
+              "text": "Pass update: {} and create: { email: \"admin@prisma.io\", name: \"Super Admin\" }."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "upsert",
+            "requiredWhereClauses": [
+              "email"
+            ]
+          },
+          "successMessage": "Idempotent admin seed function successfully implemented!"
+        },
+        {
+          "id": "task-5-4",
+          "title": "Task 2 (Independent): Bulk Idempotent Category Seeder",
+          "description": "Seed 3 default categories (Electronics, Books, Clothing) using Promise.all and category.upsert.",
+          "type": "independent",
+          "targetModel": "category",
+          "activeTab": "editor",
+          "instructions": [
+            "Map over defaultCategories",
+            "Perform prisma.category.upsert for each name",
+            "Return Promise.all"
+          ],
+          "initialCode": "const defaultCategories = ['Electronics', 'Books', 'Clothing'];\n\nexport async function seedCategories() {\n  // Return a Promise.all array of upsert operations\n}",
+          "solutionCode": "const defaultCategories = ['Electronics', 'Books', 'Clothing'];\n\nexport async function seedCategories() {\n  return await Promise.all(\n    defaultCategories.map((name) =>\n      prisma.category.upsert({\n        where: { name },\n        update: {},\n        create: { name, slug: name.toLowerCase() },\n      })\n    )\n  );\n}",
+          "solutionExplanation": "Promise.all parallelizes the upsert queries cleanly.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use defaultCategories.map(name => prisma.category.upsert(...))."
+            }
+          ],
+          "validation": {
+            "targetModel": "category",
+            "requiredMethod": "upsert",
+            "requiredWhereClauses": [
+              "name"
+            ]
+          },
+          "successMessage": "Great job! Default categories safely seeded."
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-05-challenge",
+    "title": "Day 5 Final Challenge: Deterministic Seed Pipeline",
+    "scenario": "Create an idempotent seed function that seeds an initial discount code \"WELCOME10\" with 10% discount and active status.",
+    "tasks": [
+      {
+        "id": "challenge-5-1",
+        "title": "Step 1: Upsert Welcome Discount Code",
+        "description": "Use prisma.discount.upsert to ensure \"WELCOME10\" exists with 10 percent.",
+        "type": "challenge",
+        "targetModel": "discount",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.discount.upsert",
+          "where: { code: \"WELCOME10\" }",
+          "update: { percent: 10, isActive: true }",
+          "create: { code: \"WELCOME10\", percent: 10, isActive: true }"
+        ],
+        "initialCode": "export async function seedWelcomeDiscount() {\n  return await prisma.discount.upsert({\n    where: { code: 'WELCOME10' },\n    update: { percent: 10, isActive: true },\n    create: { code: 'WELCOME10', percent: 10, isActive: true }\n  });\n}",
+        "solutionCode": "export async function seedWelcomeDiscount() {\n  return await prisma.discount.upsert({\n    where: { code: 'WELCOME10' },\n    update: { percent: 10, isActive: true },\n    create: { code: 'WELCOME10', percent: 10, isActive: true }\n  });\n}",
+        "solutionExplanation": "Ensures discount code is available for tests and checkout workflows.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use prisma.discount.upsert."
+          }
+        ],
+        "validation": {
+          "targetModel": "discount",
+          "requiredMethod": "upsert",
+          "requiredWhereClauses": [
+            "code"
+          ]
+        },
+        "successMessage": "Day 5 challenge completed! Deterministic seeder active."
+      }
+    ]
+  }
+}

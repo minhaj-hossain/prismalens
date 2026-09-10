@@ -1,0 +1,6 @@
+{
+  "name": "PrismaLens - Master Prisma ORM & Database Engineering",
+  "description": "Interactive browser-first learning platform for mastering Prisma ORM v7, schema modeling, relational design, query optimization, and production database engineering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

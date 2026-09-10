@@ -1,0 +1,241 @@
+{
+  "id": "day-08",
+  "slug": "filtering-sorting-pagination",
+  "day": 8,
+  "title": "Filtering, Sorting & Pagination",
+  "shortTitle": "Filtering & Pagination",
+  "milestoneId": "milestone-2",
+  "description": "Build production-style list queries using complex operators, case-insensitive string search, multi-column sorting, and scalable pagination.",
+  "estimatedMinutes": 55,
+  "completionLearnings": [
+    "Constructed complex boolean filter expressions using AND, OR, gte, lte, and mode: \"insensitive\"",
+    "Compared Offset Pagination (take/skip) vs Cursor Pagination (take/cursor)",
+    "Understood why cursor pagination scales to millions of rows without database degradation"
+  ],
+  "concepts": [
+    {
+      "id": "day-08-concept-1",
+      "order": 1,
+      "title": "Advanced Filtering Operators (where, in, contains, AND, OR)",
+      "shortDescription": "Master range filters, text search, and logical operators.",
+      "theory": {
+        "summary": "Prisma provides expressive filter operators: comparison (gte, lte, gt, lt), lists (in, notIn), text (contains, startsWith, endsWith with mode: \"insensitive\"), and boolean logic (AND, OR, NOT).",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "Compound Filter Query",
+          "explanation": "Combining price bounds, exact status, and case-insensitive search with AND.",
+          "code": "const results = await prisma.product.findMany({\n  where: {\n    AND: [\n      { price: { gte: 25, lte: 150 } },\n      { status: 'IN_STOCK' },\n      { title: { contains: 'wireless', mode: 'insensitive' } }\n    ]\n  }\n});"
+        },
+        "explanation": [
+          "mode: \"insensitive\": In PostgreSQL, translates to ILIKE for case-insensitive string matching.",
+          "AND / OR: Accepts an array of condition objects."
+        ],
+        "keyTakeaway": "Always use mode: \"insensitive\" for user-facing search inputs.",
+        "mcqs": [
+          {
+            "id": "mcq-8-1",
+            "question": "In PostgreSQL, what SQL operator does \"contains: \"abc\", mode: \"insensitive\"\" generate?",
+            "options": [
+              "LIKE \"%abc%\"",
+              "ILIKE \"%abc%\"",
+              "== \"abc\"",
+              "REGEXP_LIKE"
+            ],
+            "correctIndex": 1,
+            "explanation": "Prisma generates ILIKE with wildcards for case-insensitive partial string search."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-8-1",
+          "title": "Task 1 (Guided): Query Active Adult Users",
+          "description": "Find all users whose age is greater than or equal to 18 AND status is \"ACTIVE\".",
+          "type": "guided",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.user.findMany",
+            "where: { age: { gte: 18 }, status: \"ACTIVE\" }"
+          ],
+          "initialCode": "export async function getActiveAdults() {\n  return await prisma.user.findMany({\n    // Filter age >= 18 and status 'ACTIVE'\n  });\n}",
+          "solutionCode": "export async function getActiveAdults() {\n  return await prisma.user.findMany({\n    where: {\n      age: { gte: 18 },\n      status: 'ACTIVE'\n    }\n  });\n}",
+          "solutionExplanation": "Combines numeric comparison gte: 18 with scalar match status: \"ACTIVE\".",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use age: { gte: 18 } and status: \"ACTIVE\" inside where."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "findMany",
+            "requiredWhereClauses": [
+              "age",
+              "status"
+            ]
+          },
+          "successMessage": "Great job! Active adult filter query executed."
+        },
+        {
+          "id": "task-8-2",
+          "title": "Task 2 (Independent): Search Articles in Title OR Content",
+          "description": "Search articles where title OR content contains a keyword (case-insensitive).",
+          "type": "independent",
+          "targetModel": "article",
+          "activeTab": "editor",
+          "instructions": [
+            "Use OR array inside where",
+            "Check title contains keyword (mode: \"insensitive\")",
+            "Check content contains keyword (mode: \"insensitive\")"
+          ],
+          "initialCode": "export async function searchArticles(keyword: string) {\n  // Return articles matching keyword in title OR content (case-insensitive)\n}",
+          "solutionCode": "export async function searchArticles(keyword: string) {\n  return await prisma.article.findMany({\n    where: {\n      OR: [\n        { title: { contains: keyword, mode: 'insensitive' } },\n        { content: { contains: keyword, mode: 'insensitive' } }\n      ]\n    }\n  });\n}",
+          "solutionExplanation": "Uses OR array with mode: \"insensitive\" for flexible matching.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "where: { OR: [ { title: ... }, { content: ... } ] }."
+            }
+          ],
+          "validation": {
+            "targetModel": "article",
+            "requiredMethod": "findMany",
+            "requiredWhereClauses": [
+              "OR"
+            ]
+          },
+          "successMessage": "Awesome! Case-insensitive OR search constructed."
+        }
+      ]
+    },
+    {
+      "id": "day-08-concept-2",
+      "order": 2,
+      "title": "Pagination Strategies (Offset vs Cursor-Based)",
+      "shortDescription": "Compare skip/take offset pagination against cursor-based infinite scrolling.",
+      "theory": {
+        "summary": "Offset pagination (skip, take) is simple for page numbers (\"Page 3\"), but slow on deep pages because the database must scan and discard thousands of rows. Cursor pagination (cursor, take, skip: 1) jumps directly to an indexed record, delivering constant-time O(1) performance.",
+        "targetHero": {
+          "language": "typescript",
+          "badge": "High-Speed Cursor Pagination",
+          "explanation": "Uses indexed ID cursor for scalable infinite scroll.",
+          "code": "// High-performance cursor pagination\nconst feed = await prisma.post.findMany({\n  take: 10,\n  skip: 1, // Skip the cursor itself\n  cursor: { id: lastPostId },\n  orderBy: { id: 'asc' }\n});"
+        },
+        "explanation": [
+          "Offset: skip: (page - 1) * pageSize, take: pageSize. Fast for small tables; slow for deep offsets.",
+          "Cursor: cursor: { id: lastSeenId }, skip: 1, take: limit. Performs WHERE id > lastSeenId ORDER BY id LIMIT N. Extremely fast and resilient to new insertions."
+        ],
+        "keyTakeaway": "Use cursor pagination for real-time feeds and infinite scrolls to prevent database degradation.",
+        "mcqs": [
+          {
+            "id": "mcq-8-2",
+            "question": "Why does \"skip: 100000, take: 20\" become slow on large database tables?",
+            "options": [
+              "Prisma can only return 1,000 records at a time",
+              "The SQL database must read all 100,000 rows into memory before discarding them to return 20",
+              "JavaScript integer overflow occurs",
+              "PostgreSQL limits offsets to 500"
+            ],
+            "correctIndex": 1,
+            "explanation": "OFFSET N requires scanning and discarding N rows. Cursor pagination eliminates this by jumping directly to the index position."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-8-3",
+          "title": "Task 1 (Guided): Implement Offset Pagination Helper",
+          "description": "Implement getPaginatedProducts(page, pageSize) using skip and take.",
+          "type": "guided",
+          "targetModel": "product",
+          "activeTab": "editor",
+          "instructions": [
+            "Calculate skip = (page - 1) * pageSize",
+            "Set take = pageSize",
+            "Order by id asc"
+          ],
+          "initialCode": "export async function getPaginatedProducts(page: number, pageSize: number = 20) {\n  return await prisma.product.findMany({\n    // Calculate skip and take\n  });\n}",
+          "solutionCode": "export async function getPaginatedProducts(page: number, pageSize: number = 20) {\n  return await prisma.product.findMany({\n    skip: (page - 1) * pageSize,\n    take: pageSize,\n    orderBy: { id: 'asc' }\n  });\n}",
+          "solutionExplanation": "Standard offset pagination formula for page-based UIs.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Set skip: (page - 1) * pageSize and take: pageSize."
+            }
+          ],
+          "validation": {
+            "targetModel": "product",
+            "requiredMethod": "findMany"
+          },
+          "successMessage": "Offset pagination implemented successfully!"
+        },
+        {
+          "id": "task-8-4",
+          "title": "Task 2 (Independent): Implement Cursor Activity Stream",
+          "description": "Implement getActivityStream(cursorId, limit) using cursor pagination.",
+          "type": "independent",
+          "targetModel": "activity",
+          "activeTab": "editor",
+          "instructions": [
+            "Set take: limit",
+            "If cursorId is passed, add skip: 1 and cursor: { id: cursorId }",
+            "Order by id desc"
+          ],
+          "initialCode": "export async function getActivityStream(cursorId?: number, limit: number = 15) {\n  // If cursorId is provided, use cursor pagination; otherwise take the first page\n}",
+          "solutionCode": "export async function getActivityStream(cursorId?: number, limit: number = 15) {\n  return await prisma.activity.findMany({\n    take: limit,\n    ...(cursorId ? { skip: 1, cursor: { id: cursorId } } : {}),\n    orderBy: { id: 'desc' }\n  });\n}",
+          "solutionExplanation": "Uses cursor pagination with conditional spread operator.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Conditionally include cursor: { id: cursorId } and skip: 1."
+            }
+          ],
+          "validation": {
+            "targetModel": "activity",
+            "requiredMethod": "findMany"
+          },
+          "successMessage": "Great job! High-speed cursor stream created."
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-08-challenge",
+    "title": "Day 8 Final Challenge: Production Catalog Search & Filter Engine",
+    "scenario": "Create a catalog search query combining price bounds (gte, lte), status check, sorting by price asc, and limiting to 5 items.",
+    "tasks": [
+      {
+        "id": "challenge-8-1",
+        "title": "Step 1: Implement Filtered Catalog Query",
+        "description": "Find in-stock products between $10 and $150 ordered by price asc.",
+        "type": "challenge",
+        "targetModel": "product",
+        "activeTab": "editor",
+        "instructions": [
+          "Call prisma.product.findMany",
+          "where price >= 10, price <= 150, status == \"IN_STOCK\"",
+          "take 5, orderBy: { price: \"asc\" }"
+        ],
+        "initialCode": "export async function filterCatalog() {\n  return await prisma.product.findMany({\n    where: {\n      price: { gte: 10, lte: 150 },\n      status: 'IN_STOCK'\n    },\n    take: 5,\n    orderBy: { price: 'asc' }\n  });\n}",
+        "solutionCode": "export async function filterCatalog() {\n  return await prisma.product.findMany({\n    where: {\n      price: { gte: 10, lte: 150 },\n      status: 'IN_STOCK'\n    },\n    take: 5,\n    orderBy: { price: 'asc' }\n  });\n}",
+        "solutionExplanation": "Applies bounds, status filter, sorting, and limit.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Combine price gte/lte with status: \"IN_STOCK\"."
+          }
+        ],
+        "validation": {
+          "targetModel": "product",
+          "requiredMethod": "findMany",
+          "requiredWhereClauses": [
+            "price",
+            "status"
+          ]
+        },
+        "successMessage": "Day 8 challenge complete! Catalog engine working."
+      }
+    ]
+  }
+}

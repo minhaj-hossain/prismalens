@@ -1,0 +1,257 @@
+{
+  "id": "day-03",
+  "slug": "models-fields-enums",
+  "day": 3,
+  "title": "Models, Fields, Enums & Constraints",
+  "shortTitle": "Models & Constraints",
+  "milestoneId": "milestone-1",
+  "description": "Design proper database schemas with primary keys, optional fields, native database types, enums, composite unique constraints, and indexes.",
+  "estimatedMinutes": 50,
+  "completionLearnings": [
+    "Configured scalar types, optional fields (?), and automated timestamps (@updatedAt)",
+    "Defined type-safe database enums with default values",
+    "Created composite primary keys (@@id) and composite unique constraints (@@unique)"
+  ],
+  "concepts": [
+    {
+      "id": "day-03-concept-1",
+      "order": 1,
+      "title": "Scalar Types, Optionality & Primary Keys",
+      "shortDescription": "Master String, Int, Decimal, Boolean, DateTime, @id, cuid(), and @updatedAt.",
+      "theory": {
+        "summary": "Prisma scalar fields map to SQL columns. Fields are non-nullable by default unless marked with ?. Primary keys are designated with @id (autoincrement, cuid, or uuid). @updatedAt automatically writes timestamps upon every update.",
+        "targetHero": {
+          "language": "prisma",
+          "badge": "Production Entity Pattern",
+          "explanation": "A production model featuring cuid() IDs, native Decimal precision, optional descriptions, and automated timestamps.",
+          "code": "model Product {\n  id          String   @id @default(cuid())\n  sku         String   @unique\n  title       String\n  description String?\n  price       Decimal  @db.Decimal(10, 2)\n  inStock     Boolean  @default(true)\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n}"
+        },
+        "explanation": [
+          "String?: Question mark indicates an optional (nullable) field.",
+          "Decimal: Precise floating numbers for financial and e-commerce calculations without JavaScript IEEE 754 float rounding errors.",
+          "@updatedAt: Managed automatically by Prisma engine; records the exact moment any update operation touches the row."
+        ],
+        "keyTakeaway": "Always use Decimal for money and currency calculations; never use Float.",
+        "mcqs": [
+          {
+            "id": "mcq-3-1",
+            "question": "Which type should you always choose for prices and monetary amounts in Prisma?",
+            "options": [
+              "Float",
+              "Decimal",
+              "Int (cents only)",
+              "String"
+            ],
+            "correctIndex": 1,
+            "explanation": "Decimal prevents floating-point inaccuracies and maps to SQL DECIMAL(precision, scale)."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-3-1",
+          "title": "Task 1 (Guided): Create Product Model with Precision Types",
+          "description": "Create a Product model with cuid() id, required title, optional description, Decimal price, and timestamps.",
+          "type": "guided",
+          "targetModel": "Product",
+          "activeTab": "schema",
+          "instructions": [
+            "Model Product with id String @id @default(cuid())",
+            "title String",
+            "description String?",
+            "price Decimal",
+            "createdAt DateTime @default(now())",
+            "updatedAt DateTime @updatedAt"
+          ],
+          "initialCode": "// Define the Product model here:\n",
+          "solutionCode": "model Product {\n  id          String   @id @default(cuid())\n  title       String\n  description String?\n  price       Decimal\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n}",
+          "solutionExplanation": "Creates Product model with cuid primary key, nullable description, and timestamp directives.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use \"model Product { ... }\"."
+            },
+            {
+              "level": 2,
+              "text": "Mark description as String? and updatedAt with @updatedAt."
+            }
+          ],
+          "validation": {
+            "targetModel": "Product",
+            "requiredFieldsInSelect": [
+              "id",
+              "title",
+              "price",
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "successMessage": "Great job! Model Product matches production standards."
+        },
+        {
+          "id": "task-3-2",
+          "title": "Task 2 (Independent): Create Article Model with Unique Slug",
+          "description": "Define an Article model with autoincrement ID, unique slug, title, isPublished default false, and createdAt.",
+          "type": "independent",
+          "targetModel": "Article",
+          "activeTab": "schema",
+          "instructions": [
+            "id Int @id @default(autoincrement())",
+            "slug String @unique",
+            "title String",
+            "isPublished Boolean @default(false)",
+            "createdAt DateTime @default(now())"
+          ],
+          "initialCode": "// Define the Article model:\n",
+          "solutionCode": "model Article {\n  id          Int      @id @default(autoincrement())\n  slug        String   @unique\n  title       String\n  isPublished Boolean  @default(false)\n  createdAt   DateTime @default(now())\n}",
+          "solutionExplanation": "Enforces uniqueness on slug and defaults isPublished to false.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Add @unique to the slug field and @default(false) to isPublished."
+            }
+          ],
+          "validation": {
+            "targetModel": "Article",
+            "requiredFieldsInSelect": [
+              "id",
+              "slug",
+              "title",
+              "isPublished",
+              "createdAt"
+            ]
+          },
+          "successMessage": "Well done! Model Article defined with unique constraint."
+        }
+      ]
+    },
+    {
+      "id": "day-03-concept-2",
+      "order": 2,
+      "title": "Enums & Multi-Field Constraints (@@unique, @@index)",
+      "shortDescription": "Enforce valid domain states with Enums and composite multi-column uniqueness with @@unique.",
+      "theory": {
+        "summary": "Enums restrict column values to a predefined list in the database. Multi-column composite constraints (@@unique([userId, orgId])) guarantee that combinations of columns remain unique together.",
+        "targetHero": {
+          "language": "prisma",
+          "badge": "Composite Constraints Pattern",
+          "explanation": "Using enums and composite primary keys with @@id([userId, orgId]).",
+          "code": "enum Role {\n  USER\n  EDITOR\n  ADMIN\n}\n\nmodel Membership {\n  userId String\n  orgId  String\n  role   Role   @default(USER)\n\n  @@id([userId, orgId])\n  @@index([role])\n}"
+        },
+        "explanation": [
+          "enum: Stored natively in PostgreSQL as an ENUM type.",
+          "@@id([a, b]): Creates a composite primary key formed by multiple columns.",
+          "@@unique([a, b]): Allows unique pairs while letting each individual column have duplicates."
+        ],
+        "keyTakeaway": "Use composite constraints to prevent duplicate enrollments, favorites, or memberships.",
+        "mcqs": [
+          {
+            "id": "mcq-3-2",
+            "question": "When should you use @@unique([studentId, courseId])?",
+            "options": [
+              "When a student can only ever take one course in their lifetime",
+              "When a student cannot enroll in the same course more than once",
+              "When only one student is allowed per course",
+              "When courses must have unique titles"
+            ],
+            "correctIndex": 1,
+            "explanation": "Composite unique ensures the combination of (studentId, courseId) is distinct."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-3-3",
+          "title": "Task 1 (Guided): Define OrderStatus Enum & Order Model",
+          "description": "Define enum OrderStatus with PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED, and attach it to model Order.",
+          "type": "guided",
+          "targetModel": "Order",
+          "activeTab": "schema",
+          "instructions": [
+            "Define enum OrderStatus with the 5 statuses",
+            "Model Order with id Int @id, status OrderStatus @default(PENDING), and total Decimal"
+          ],
+          "initialCode": "// Define enum OrderStatus and model Order:\n",
+          "solutionCode": "enum OrderStatus {\n  PENDING\n  PROCESSING\n  SHIPPED\n  DELIVERED\n  CANCELLED\n}\n\nmodel Order {\n  id     Int         @id @default(autoincrement())\n  status OrderStatus @default(PENDING)\n  total  Decimal\n}",
+          "solutionExplanation": "Defines an enum in the database and references it as a field type on Order.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Use \"enum OrderStatus { PENDING PROCESSING SHIPPED DELIVERED CANCELLED }\"."
+            },
+            {
+              "level": 2,
+              "text": "In model Order, set \"status OrderStatus @default(PENDING)\"."
+            }
+          ],
+          "validation": {
+            "targetModel": "Order",
+            "requiredFieldsInSelect": [
+              "id",
+              "status",
+              "total"
+            ]
+          },
+          "successMessage": "Great work! OrderStatus enum provides robust domain constraint."
+        },
+        {
+          "id": "task-3-4",
+          "title": "Task 2 (Independent): Add Composite Unique Constraint to Enrollment",
+          "description": "Prevent duplicate student enrollments by adding @@unique([studentId, courseId]).",
+          "type": "independent",
+          "targetModel": "CourseEnrollment",
+          "activeTab": "schema",
+          "instructions": [
+            "Add @@unique([studentId, courseId]) inside model CourseEnrollment"
+          ],
+          "initialCode": "model CourseEnrollment {\n  id         Int      @id @default(autoincrement())\n  studentId  String\n  courseId   String\n  enrolledAt DateTime @default(now())\n  // Add composite unique constraint\n}",
+          "solutionCode": "model CourseEnrollment {\n  id         Int      @id @default(autoincrement())\n  studentId  String\n  courseId   String\n  enrolledAt DateTime @default(now())\n\n  @@unique([studentId, courseId])\n}",
+          "solutionExplanation": "@@unique([studentId, courseId]) instructs PostgreSQL to enforce unique pairs.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Write @@unique([studentId, courseId]) at the bottom of the model."
+            }
+          ],
+          "validation": {
+            "targetModel": "CourseEnrollment"
+          },
+          "successMessage": "Excellent! Duplicate enrollments are physically blocked at the database level."
+        }
+      ]
+    }
+  ],
+  "challenge": {
+    "id": "day-03-challenge",
+    "title": "Day 3 Final Challenge: Complete E-Commerce Schema Blueprint",
+    "scenario": "Design the full schema for DigitalGoodsStore with User (cuid, unique email, role), Product (Decimal price), and UserFavorite (composite primary key).",
+    "tasks": [
+      {
+        "id": "challenge-3-1",
+        "title": "Step 1: Define UserFavorite Composite Model",
+        "description": "Model UserFavorite with userId String, productId String, and @@id([userId, productId]).",
+        "type": "challenge",
+        "targetModel": "UserFavorite",
+        "activeTab": "schema",
+        "instructions": [
+          "Define model UserFavorite",
+          "Fields: userId String, productId String, createdAt DateTime @default(now())",
+          "Add @@id([userId, productId])"
+        ],
+        "initialCode": "// Define UserFavorite model with composite primary key:\n",
+        "solutionCode": "model UserFavorite {\n  userId    String\n  productId String\n  createdAt DateTime @default(now())\n\n  @@id([userId, productId])\n}",
+        "solutionExplanation": "Creates a clean join model with composite primary key.",
+        "hints": [
+          {
+            "level": 1,
+            "text": "Use @@id([userId, productId]) to create the composite key."
+          }
+        ],
+        "validation": {
+          "targetModel": "UserFavorite"
+        },
+        "successMessage": "UserFavorite composite model configured!"
+      }
+    ]
+  }
+}

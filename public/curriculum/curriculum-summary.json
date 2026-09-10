@@ -1,0 +1,2011 @@
+{
+  "generatedAt": "2026-09-09T15:23:00.713Z",
+  "overview": {
+    "totalDays": 14,
+    "totalConcepts": 29,
+    "totalTasks": 73,
+    "milestonesCount": 4,
+    "totalEstimatedMinutes": 690
+  },
+  "milestones": [
+    {
+      "id": "milestone-1",
+      "number": 1,
+      "title": "Foundations & Schema Modeling",
+      "subtitle": "From Raw SQL to Relational Schemas",
+      "description": "Master the database problems ORMs solve, Prisma v7 setup, declarative schema design, native types, constraints, and all relational patterns (1:1, 1:N, M:N).",
+      "daysRange": "Days 1 – 4",
+      "moduleIds": [
+        "day-01",
+        "day-02",
+        "day-03",
+        "day-04"
+      ]
+    },
+    {
+      "id": "milestone-2",
+      "number": 2,
+      "title": "Migrations, Operations & Controlled Reads",
+      "subtitle": "Database Evolution & Optimized Querying",
+      "description": "Safely evolve schemas with migrations and seeders, manage connection pools and client singletons, and build precise read queries with select, include, filters, and pagination.",
+      "daysRange": "Days 5 – 8",
+      "moduleIds": [
+        "day-05",
+        "day-06",
+        "day-07",
+        "day-08"
+      ]
+    },
+    {
+      "id": "milestone-3",
+      "number": 3,
+      "title": "Mutations, Data Integrity & Transactions",
+      "subtitle": "ACID Guarantees & Safe Writes",
+      "description": "Safely accept user input with Zod, execute atomic updates and idempotent upserts, configure referential cascade actions, and master nested writes with ACID transactions.",
+      "daysRange": "Days 9 – 12",
+      "moduleIds": [
+        "day-09",
+        "day-10",
+        "day-11",
+        "day-12"
+      ]
+    },
+    {
+      "id": "milestone-4",
+      "number": 4,
+      "title": "Production REST APIs & Resilience",
+      "subtitle": "Enterprise Architecture & Hardening",
+      "description": "Intercept Prisma error codes without leaking database internals, build robust Express error middleware, and architect a complete production-grade publishing REST API.",
+      "daysRange": "Days 13 – 14",
+      "moduleIds": [
+        "day-13",
+        "day-14"
+      ]
+    }
+  ],
+  "days": [
+    {
+      "day": 1,
+      "id": "day-01",
+      "slug": "why-prisma",
+      "title": "Day 1 — Why Prisma?",
+      "shortTitle": "Why Prisma?",
+      "milestoneId": "milestone-1",
+      "description": "See how Prisma makes database work easier to write, understand, and maintain in a TypeScript application.",
+      "estimatedMinutes": 45,
+      "completionLearnings": [
+        "Understand why database data and TypeScript code do not naturally use the same types and structure",
+        "Understand how schema.prisma, Prisma Client, and Prisma Migrate fit together",
+        "Write a simple Prisma Client query and understand what it does in the database"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 5,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-01-concept-1",
+          "order": 1,
+          "title": "Why Databases and TypeScript Disagree (and How Prisma Fixes It)",
+          "shortDescription": "Why SQL strings are invisible to TypeScript and how Prisma gives your backend a generated, strongly typed database API.",
+          "hasMcq": true,
+          "tasksCount": 3,
+          "tasks": [
+            {
+              "id": "task-1-1",
+              "title": "Task 1 (Guided): Read and Shape a Prisma Query",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique",
+                "Set where: { id: userId }",
+                "Use select: { id: true, name: true } to return only id and name"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "id"
+                ],
+                "requiredFieldsInSelect": [
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            {
+              "id": "task-1-2",
+              "title": "Task 2 (Guided): Write a findUnique Query by Unique Email",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique",
+                "Pass where: { email } to filter by unique email",
+                "Use select to return id, name, and email"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "email"
+                ],
+                "requiredFieldsInSelect": [
+                  "id",
+                  "name",
+                  "email"
+                ]
+              }
+            },
+            {
+              "id": "task-1-3",
+              "title": "Task 3 (Independent): Fix an Invalid Field Name (Without \"as any\")",
+              "type": "independent",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Remove \"as any\" from the query argument",
+                "Replace the nonexistent field user_mail with email in the where filter",
+                "Select id and email in the returned record"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "email"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-01-concept-2",
+          "order": 2,
+          "title": "How Prisma Fits Together (Schema, Client & Migrate)",
+          "shortDescription": "How schema.prisma, generated Prisma Client, and Prisma Migrate connect your TypeScript backend to your database.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-1-4",
+              "title": "Task 1 (Guided): Querying with Precise Field Shape",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique with where: { id: userId }",
+                "Select only id: true and email: true"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "id"
+                ],
+                "requiredFieldsInSelect": [
+                  "id",
+                  "email"
+                ]
+              }
+            },
+            {
+              "id": "task-1-5",
+              "title": "Task 2 (Independent): Retrieve Public Profile Fields",
+              "type": "independent",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique",
+                "Filter by where: { email }",
+                "Use select to return only name and email"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "email"
+                ],
+                "requiredFieldsInSelect": [
+                  "name",
+                  "email"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-01-challenge",
+        "title": "Day 1 Challenge: Replace a Legacy User Lookup",
+        "scenario": "Your team is refactoring a legacy Express service. You need to replace an untyped raw SQL helper with a strongly typed Prisma query that retrieves a user by their unique email.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-1-1",
+            "title": "Replace Legacy User Lookup with Typed Prisma Query",
+            "type": "challenge",
+            "targetModel": "user",
+            "activeTab": "editor",
+            "instructions": [
+              "Use prisma.user.findUnique",
+              "Filter by where: { email }",
+              "Select only id, name, and email",
+              "Do not use raw SQL strings or \"as any\""
+            ],
+            "validation": {
+              "targetModel": "user",
+              "requiredMethod": "findUnique",
+              "requiredWhereClauses": [
+                "email"
+              ],
+              "requiredFieldsInSelect": [
+                "id",
+                "name",
+                "email"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 2,
+      "id": "day-02",
+      "slug": "prisma-setup-v7",
+      "title": "Modern Prisma v7 Setup & Configuration",
+      "shortTitle": "Setup & CLI Tooling",
+      "milestoneId": "milestone-1",
+      "description": "Create a working Prisma + PostgreSQL project, understand Prisma CLI tooling, manage connection pooling, and use introspection (db pull).",
+      "estimatedMinutes": 45,
+      "completionLearnings": [
+        "Mastered essential Prisma CLI commands: init, generate, db pull, and studio",
+        "Configured connection pooling strings with PgBouncer query parameters",
+        "Mapped snake_case database tables to camelCase TypeScript models with @map and @@map"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-02-concept-1",
+          "order": 1,
+          "title": "Prisma CLI Commands & Lifecycle",
+          "shortDescription": "Master npx prisma generate, db pull, and connection pooling configuration.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-2-1",
+              "title": "Task 1 (Guided): Identify Client Generation Command",
+              "type": "guided",
+              "targetModel": "cli",
+              "activeTab": "editor",
+              "instructions": [
+                "Return the string \"npx prisma generate\" from getGenerateCommand()"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-2-2",
+              "title": "Task 2 (Independent): Append Connection Pooling Parameters",
+              "type": "independent",
+              "targetModel": "url",
+              "activeTab": "editor",
+              "instructions": [
+                "Parse or manipulate basePostgresUrl",
+                "Ensure pgbouncer=true and connection_limit=10 are set as query params"
+              ],
+              "validation": {}
+            }
+          ]
+        },
+        {
+          "id": "day-02-concept-2",
+          "order": 2,
+          "title": "Database Introspection & Field Mapping (@map, @@map)",
+          "shortDescription": "Keep TypeScript idiomatic in camelCase while retaining legacy snake_case in PostgreSQL.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-2-3",
+              "title": "Task 1 (Guided): Map Legacy Customer Table and Columns",
+              "type": "guided",
+              "targetModel": "Customer",
+              "activeTab": "schema",
+              "instructions": [
+                "Add @map(\"cust_email\") to field email",
+                "Add @@map(\"tbl_customers\") to model Customer"
+              ],
+              "validation": {
+                "targetModel": "Customer"
+              }
+            },
+            {
+              "id": "task-2-4",
+              "title": "Task 2 (Independent): Map Phone & Registered Date Columns",
+              "type": "independent",
+              "targetModel": "Customer",
+              "activeTab": "schema",
+              "instructions": [
+                "Map phoneNumber to \"phone_number\"",
+                "Map registeredAt to \"registered_at\""
+              ],
+              "validation": {
+                "targetModel": "Customer"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-02-challenge",
+        "title": "Day 2 Final Challenge: Legacy DB Migration Setup",
+        "scenario": "Take an introspected database schema with raw table names (auth_users, sys_logs), rename models into PascalCase TypeScript entities, and apply mappings.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-2-1",
+            "title": "Step 1: Map Auth User Model",
+            "type": "challenge",
+            "targetModel": "AuthUser",
+            "activeTab": "schema",
+            "instructions": [
+              "Define model AuthUser with id Int @id",
+              "Map passwordHash String to \"password_hash\"",
+              "Map model to \"auth_users\""
+            ],
+            "validation": {
+              "targetModel": "AuthUser"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 3,
+      "id": "day-03",
+      "slug": "models-fields-enums",
+      "title": "Models, Fields, Enums & Constraints",
+      "shortTitle": "Models & Constraints",
+      "milestoneId": "milestone-1",
+      "description": "Design proper database schemas with primary keys, optional fields, native database types, enums, composite unique constraints, and indexes.",
+      "estimatedMinutes": 50,
+      "completionLearnings": [
+        "Configured scalar types, optional fields (?), and automated timestamps (@updatedAt)",
+        "Defined type-safe database enums with default values",
+        "Created composite primary keys (@@id) and composite unique constraints (@@unique)"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-03-concept-1",
+          "order": 1,
+          "title": "Scalar Types, Optionality & Primary Keys",
+          "shortDescription": "Master String, Int, Decimal, Boolean, DateTime, @id, cuid(), and @updatedAt.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-3-1",
+              "title": "Task 1 (Guided): Create Product Model with Precision Types",
+              "type": "guided",
+              "targetModel": "Product",
+              "activeTab": "schema",
+              "instructions": [
+                "Model Product with id String @id @default(cuid())",
+                "title String",
+                "description String?",
+                "price Decimal",
+                "createdAt DateTime @default(now())",
+                "updatedAt DateTime @updatedAt"
+              ],
+              "validation": {
+                "targetModel": "Product",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "title",
+                  "price",
+                  "createdAt",
+                  "updatedAt"
+                ]
+              }
+            },
+            {
+              "id": "task-3-2",
+              "title": "Task 2 (Independent): Create Article Model with Unique Slug",
+              "type": "independent",
+              "targetModel": "Article",
+              "activeTab": "schema",
+              "instructions": [
+                "id Int @id @default(autoincrement())",
+                "slug String @unique",
+                "title String",
+                "isPublished Boolean @default(false)",
+                "createdAt DateTime @default(now())"
+              ],
+              "validation": {
+                "targetModel": "Article",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "slug",
+                  "title",
+                  "isPublished",
+                  "createdAt"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-03-concept-2",
+          "order": 2,
+          "title": "Enums & Multi-Field Constraints (@@unique, @@index)",
+          "shortDescription": "Enforce valid domain states with Enums and composite multi-column uniqueness with @@unique.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-3-3",
+              "title": "Task 1 (Guided): Define OrderStatus Enum & Order Model",
+              "type": "guided",
+              "targetModel": "Order",
+              "activeTab": "schema",
+              "instructions": [
+                "Define enum OrderStatus with the 5 statuses",
+                "Model Order with id Int @id, status OrderStatus @default(PENDING), and total Decimal"
+              ],
+              "validation": {
+                "targetModel": "Order",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "status",
+                  "total"
+                ]
+              }
+            },
+            {
+              "id": "task-3-4",
+              "title": "Task 2 (Independent): Add Composite Unique Constraint to Enrollment",
+              "type": "independent",
+              "targetModel": "CourseEnrollment",
+              "activeTab": "schema",
+              "instructions": [
+                "Add @@unique([studentId, courseId]) inside model CourseEnrollment"
+              ],
+              "validation": {
+                "targetModel": "CourseEnrollment"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-03-challenge",
+        "title": "Day 3 Final Challenge: Complete E-Commerce Schema Blueprint",
+        "scenario": "Design the full schema for DigitalGoodsStore with User (cuid, unique email, role), Product (Decimal price), and UserFavorite (composite primary key).",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-3-1",
+            "title": "Step 1: Define UserFavorite Composite Model",
+            "type": "challenge",
+            "targetModel": "UserFavorite",
+            "activeTab": "schema",
+            "instructions": [
+              "Define model UserFavorite",
+              "Fields: userId String, productId String, createdAt DateTime @default(now())",
+              "Add @@id([userId, productId])"
+            ],
+            "validation": {
+              "targetModel": "UserFavorite"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "id": "day-04",
+      "slug": "relations-modeling",
+      "title": "Relations (1-to-1, 1-to-Many, Many-to-Many)",
+      "shortTitle": "Relations Modeling",
+      "milestoneId": "milestone-1",
+      "description": "Model real-world relationships in Prisma schemas, understand foreign keys, @relation attributes, and implicit vs explicit join tables.",
+      "estimatedMinutes": 55,
+      "completionLearnings": [
+        "Mastered 1-to-Many relations: foreign key scalar field (authorId Int) vs relation field (author User)",
+        "Understood 1-to-1 relations and why @unique on foreign key turns 1:N into 1:1",
+        "Distinguished implicit M:N vs explicit M:N join tables with custom relationship attributes"
+      ],
+      "conceptsCount": 3,
+      "practiceTasksCount": 6,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-04-concept-1",
+          "order": 1,
+          "title": "One-to-Many (1:N) Relations",
+          "shortDescription": "The fundamental relational pattern: parent holds array, child holds foreign key.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-4-1",
+              "title": "Task 1 (Guided): Connect Author and Book (1:N)",
+              "type": "guided",
+              "targetModel": "Book",
+              "activeTab": "schema",
+              "instructions": [
+                "In model Book, add authorId Int",
+                "Add author Author @relation(fields: [authorId], references: [id])"
+              ],
+              "validation": {
+                "targetModel": "Book",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "title",
+                  "authorId"
+                ]
+              }
+            },
+            {
+              "id": "task-4-2",
+              "title": "Task 2 (Independent): Optional 1:N Relation (Company & Employee)",
+              "type": "independent",
+              "targetModel": "Employee",
+              "activeTab": "schema",
+              "instructions": [
+                "In model Employee, add companyId Int?",
+                "Add company Company? @relation(fields: [companyId], references: [id])"
+              ],
+              "validation": {
+                "targetModel": "Employee",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "name",
+                  "companyId"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-04-concept-2",
+          "order": 2,
+          "title": "One-to-One (1:1) Relations",
+          "shortDescription": "The foreign key in a 1:1 relation MUST be unique to guarantee exclusivity.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-4-3",
+              "title": "Task 1 (Guided): Connect Account and AccountSettings (1:1)",
+              "type": "guided",
+              "targetModel": "AccountSettings",
+              "activeTab": "schema",
+              "instructions": [
+                "Add accountId Int @unique to AccountSettings",
+                "Add account Account @relation(fields: [accountId], references: [id])"
+              ],
+              "validation": {
+                "targetModel": "AccountSettings",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "darkMode",
+                  "accountId"
+                ]
+              }
+            },
+            {
+              "id": "task-4-4",
+              "title": "Task 2 (Independent): Fix 1:1 Unique Constraint Bug",
+              "type": "independent",
+              "targetModel": "License",
+              "activeTab": "schema",
+              "instructions": [
+                "Add @unique to driverId in model License"
+              ],
+              "validation": {
+                "targetModel": "License",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "number",
+                  "driverId"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-04-concept-3",
+          "order": 3,
+          "title": "Many-to-Many (M:N) Relations (Implicit vs Explicit)",
+          "shortDescription": "Choose between Prisma-managed implicit join tables and explicit models with extra metadata.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-4-5",
+              "title": "Task 1 (Guided): Define Implicit M:N Relation (Post & Category)",
+              "type": "guided",
+              "targetModel": "Post",
+              "activeTab": "schema",
+              "instructions": [
+                "In model Post, add categories Category[]",
+                "In model Category, add posts Post[]"
+              ],
+              "validation": {
+                "targetModel": "Post"
+              }
+            },
+            {
+              "id": "task-4-6",
+              "title": "Task 2 (Independent): Explicit M:N Join Model with Grade",
+              "type": "independent",
+              "targetModel": "ClassEnrollment",
+              "activeTab": "schema",
+              "instructions": [
+                "Define model ClassEnrollment with studentId Int, classRoomId Int, grade Decimal?",
+                "Add relations to Student and ClassRoom",
+                "Add composite primary key @@id([studentId, classRoomId])"
+              ],
+              "validation": {
+                "targetModel": "ClassEnrollment",
+                "requiredFieldsInSelect": [
+                  "studentId",
+                  "classRoomId"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-04-challenge",
+        "title": "Day 4 Final Challenge: Social Network Relational Core",
+        "scenario": "Build the complete relational schema for a social network: User to Profile (1:1), User to Post (1:N), and Post to Comment (1:N).",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-4-1",
+            "title": "Step 1: Wire Up Post and Comment Relation",
+            "type": "challenge",
+            "targetModel": "Comment",
+            "activeTab": "schema",
+            "instructions": [
+              "In model Comment, add postId Int",
+              "Add post Post @relation(fields: [postId], references: [id])"
+            ],
+            "validation": {
+              "targetModel": "Comment",
+              "requiredFieldsInSelect": [
+                "id",
+                "content",
+                "postId"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 5,
+      "id": "day-05",
+      "slug": "migrations-and-seeding",
+      "title": "Migrations + Seeding",
+      "shortTitle": "Migrations & Seeding",
+      "milestoneId": "milestone-2",
+      "description": "Safely evolve database schemas with prisma migrate dev, understand migration SQL files, and build idempotent seeders with prisma/seed.ts.",
+      "estimatedMinutes": 45,
+      "completionLearnings": [
+        "Mastered the difference between migrate dev (diff & create SQL) and migrate deploy (production CI/CD)",
+        "Understood how to safely add non-nullable columns to populated tables using @default",
+        "Built idempotent seeders using upsert to avoid duplicate key errors on repeated runs"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-05-concept-1",
+          "order": 1,
+          "title": "Prisma Migrate Workflow (migrate dev vs deploy)",
+          "shortDescription": "How Prisma compares schema against database state, writes SQL migrations, and applies them.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-5-1",
+              "title": "Task 1 (Guided): Return Production Migration Command",
+              "type": "guided",
+              "targetModel": "cli",
+              "activeTab": "editor",
+              "instructions": [
+                "Return \"npx prisma migrate deploy\" from getProductionMigrationCommand()"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-5-2",
+              "title": "Task 2 (Independent): Safely Add Required Column with @default",
+              "type": "independent",
+              "targetModel": "Order",
+              "activeTab": "schema",
+              "instructions": [
+                "In model Order, add \"status String @default(\"PENDING\")\""
+              ],
+              "validation": {
+                "targetModel": "Order",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "amount",
+                  "status"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-05-concept-2",
+          "order": 2,
+          "title": "Idempotent Seeding with prisma/seed.ts",
+          "shortDescription": "Write reproducible seeds using upsert to prevent unique constraint failures.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-5-3",
+              "title": "Task 1 (Guided): Idempotent Admin Seeder",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.upsert",
+                "where: { email: \"admin@prisma.io\" }",
+                "update: {}",
+                "create: { email: \"admin@prisma.io\", name: \"Super Admin\" }"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "upsert",
+                "requiredWhereClauses": [
+                  "email"
+                ]
+              }
+            },
+            {
+              "id": "task-5-4",
+              "title": "Task 2 (Independent): Bulk Idempotent Category Seeder",
+              "type": "independent",
+              "targetModel": "category",
+              "activeTab": "editor",
+              "instructions": [
+                "Map over defaultCategories",
+                "Perform prisma.category.upsert for each name",
+                "Return Promise.all"
+              ],
+              "validation": {
+                "targetModel": "category",
+                "requiredMethod": "upsert",
+                "requiredWhereClauses": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-05-challenge",
+        "title": "Day 5 Final Challenge: Deterministic Seed Pipeline",
+        "scenario": "Create an idempotent seed function that seeds an initial discount code \"WELCOME10\" with 10% discount and active status.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-5-1",
+            "title": "Step 1: Upsert Welcome Discount Code",
+            "type": "challenge",
+            "targetModel": "discount",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.discount.upsert",
+              "where: { code: \"WELCOME10\" }",
+              "update: { percent: 10, isActive: true }",
+              "create: { code: \"WELCOME10\", percent: 10, isActive: true }"
+            ],
+            "validation": {
+              "targetModel": "discount",
+              "requiredMethod": "upsert",
+              "requiredWhereClauses": [
+                "code"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 6,
+      "id": "day-06",
+      "slug": "client-lifecycle-connections",
+      "title": "PrismaClient Lifecycle & Connections",
+      "shortTitle": "Client Lifecycle",
+      "milestoneId": "milestone-2",
+      "description": "Understand connection management, connection pooling limits, singleton patterns in Next.js/Express, query logging, and graceful shutdown.",
+      "estimatedMinutes": 40,
+      "completionLearnings": [
+        "Mastered the global PrismaClient singleton pattern to avoid connection exhaustion in HMR development",
+        "Configured query performance logging with event listeners for slow-query detection",
+        "Implemented clean process shutdown handlers with prisma.$disconnect()"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-06-concept-1",
+          "order": 1,
+          "title": "The Global PrismaClient Singleton Pattern",
+          "shortDescription": "Prevent \"Too many connections\" errors during development hot module reload.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-6-1",
+              "title": "Task 1 (Guided): Implement lib/prisma.ts Singleton",
+              "type": "guided",
+              "targetModel": "singleton",
+              "activeTab": "editor",
+              "instructions": [
+                "Cast globalThis to { prisma: PrismaClient | undefined }",
+                "Export const prisma = globalForPrisma.prisma ?? new PrismaClient()",
+                "If NODE_ENV !== \"production\", save prisma to globalForPrisma.prisma"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-6-2",
+              "title": "Task 2 (Independent): Fix Connection Exhaustion Bug",
+              "type": "independent",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Remove \"new PrismaClient()\" inside handleRequest",
+                "Use the passed or imported singleton prisma client"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findMany"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-06-concept-2",
+          "order": 2,
+          "title": "Query Logging & Graceful Disconnect",
+          "shortDescription": "Configure query telemetry and handle SIGINT / SIGTERM signals cleanly.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-6-3",
+              "title": "Task 1 (Guided): Instantiate Logged PrismaClient",
+              "type": "guided",
+              "targetModel": "logger",
+              "activeTab": "editor",
+              "instructions": [
+                "Return an object with log: [{ emit: \"event\", level: \"query\" }]"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-6-4",
+              "title": "Task 2 (Independent): Register Graceful Disconnect",
+              "type": "independent",
+              "targetModel": "lifecycle",
+              "activeTab": "editor",
+              "instructions": [
+                "Inside setupGracefulShutdown, invoke client.$disconnect()"
+              ],
+              "validation": {}
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-06-challenge",
+        "title": "Day 6 Final Challenge: Enterprise Database Gateway",
+        "scenario": "Implement a database health check that executes a fast probe query using prisma.user.findFirst to confirm connectivity.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-6-1",
+            "title": "Step 1: Execute Health Probe Query",
+            "type": "challenge",
+            "targetModel": "user",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.user.findFirst",
+              "Select id only"
+            ],
+            "validation": {
+              "targetModel": "user",
+              "requiredMethod": "findFirst",
+              "requiredFieldsInSelect": [
+                "id"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 7,
+      "id": "day-07",
+      "slug": "reading-data-select-include",
+      "title": "Reading Data + select vs include",
+      "shortTitle": "Reading Data",
+      "milestoneId": "milestone-2",
+      "description": "Build controlled queries with findMany, findUnique, findFirst, understand data pruning with select, and master relation loading with include.",
+      "estimatedMinutes": 50,
+      "completionLearnings": [
+        "Mastered the distinction between findUnique (indexed/unique fields only) vs findFirst vs findMany",
+        "Understood the Golden Rule of Prisma: Never combine select and include at the root of the same object",
+        "Pruned sensitive columns (password hashes, internal flags) by shaping output with nested select"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-07-concept-1",
+          "order": 1,
+          "title": "Query Execution: findUnique, findFirst, findMany",
+          "shortDescription": "Master the fundamental read methods and their unique constraint rules.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-7-1",
+              "title": "Task 1 (Guided): Find Product by Unique SKU",
+              "type": "guided",
+              "targetModel": "product",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.product.findUnique",
+                "Set where: { sku }"
+              ],
+              "validation": {
+                "targetModel": "product",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "sku"
+                ]
+              }
+            },
+            {
+              "id": "task-7-2",
+              "title": "Task 2 (Independent): Find Latest Active Discount Code",
+              "type": "independent",
+              "targetModel": "discount",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.discount.findFirst",
+                "where: { isActive: true }",
+                "orderBy: { createdAt: \"desc\" }"
+              ],
+              "validation": {
+                "targetModel": "discount",
+                "requiredMethod": "findFirst",
+                "requiredWhereClauses": [
+                  "isActive"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-07-concept-2",
+          "order": 2,
+          "title": "Data Shaping (select) vs Relation Loading (include)",
+          "shortDescription": "The Golden Rule: Never combine select and include at the root of the same object.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-7-3",
+              "title": "Task 1 (Guided): Nested Select for Author Profile & Posts",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique where id: authorId",
+                "Use select to return id: true, name: true",
+                "Inside select, include posts: { select: { id: true, title: true } }"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "name",
+                  "posts"
+                ]
+              }
+            },
+            {
+              "id": "task-7-4",
+              "title": "Task 2 (Independent): Fix Root select + include Crash",
+              "type": "independent",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Refactor query to use select only",
+                "Move posts: true inside the select block"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredFieldsInSelect": [
+                  "id",
+                  "email",
+                  "posts"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-07-challenge",
+        "title": "Day 7 Final Challenge: High-Performance Profile & Feed Loader",
+        "scenario": "Build a secure author feed query: retrieve user id and name, and include only published posts (id, title, views).",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-7-1",
+            "title": "Step 1: Build Author Feed Query",
+            "type": "challenge",
+            "targetModel": "user",
+            "activeTab": "editor",
+            "instructions": [
+              "Find user by id",
+              "Select id, name, and posts",
+              "In posts select id, title, and views"
+            ],
+            "validation": {
+              "targetModel": "user",
+              "requiredMethod": "findUnique",
+              "requiredFieldsInSelect": [
+                "id",
+                "name",
+                "posts"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 8,
+      "id": "day-08",
+      "slug": "filtering-sorting-pagination",
+      "title": "Filtering, Sorting & Pagination",
+      "shortTitle": "Filtering & Pagination",
+      "milestoneId": "milestone-2",
+      "description": "Build production-style list queries using complex operators, case-insensitive string search, multi-column sorting, and scalable pagination.",
+      "estimatedMinutes": 55,
+      "completionLearnings": [
+        "Constructed complex boolean filter expressions using AND, OR, gte, lte, and mode: \"insensitive\"",
+        "Compared Offset Pagination (take/skip) vs Cursor Pagination (take/cursor)",
+        "Understood why cursor pagination scales to millions of rows without database degradation"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-08-concept-1",
+          "order": 1,
+          "title": "Advanced Filtering Operators (where, in, contains, AND, OR)",
+          "shortDescription": "Master range filters, text search, and logical operators.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-8-1",
+              "title": "Task 1 (Guided): Query Active Adult Users",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findMany",
+                "where: { age: { gte: 18 }, status: \"ACTIVE\" }"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findMany",
+                "requiredWhereClauses": [
+                  "age",
+                  "status"
+                ]
+              }
+            },
+            {
+              "id": "task-8-2",
+              "title": "Task 2 (Independent): Search Articles in Title OR Content",
+              "type": "independent",
+              "targetModel": "article",
+              "activeTab": "editor",
+              "instructions": [
+                "Use OR array inside where",
+                "Check title contains keyword (mode: \"insensitive\")",
+                "Check content contains keyword (mode: \"insensitive\")"
+              ],
+              "validation": {
+                "targetModel": "article",
+                "requiredMethod": "findMany",
+                "requiredWhereClauses": [
+                  "OR"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-08-concept-2",
+          "order": 2,
+          "title": "Pagination Strategies (Offset vs Cursor-Based)",
+          "shortDescription": "Compare skip/take offset pagination against cursor-based infinite scrolling.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-8-3",
+              "title": "Task 1 (Guided): Implement Offset Pagination Helper",
+              "type": "guided",
+              "targetModel": "product",
+              "activeTab": "editor",
+              "instructions": [
+                "Calculate skip = (page - 1) * pageSize",
+                "Set take = pageSize",
+                "Order by id asc"
+              ],
+              "validation": {
+                "targetModel": "product",
+                "requiredMethod": "findMany"
+              }
+            },
+            {
+              "id": "task-8-4",
+              "title": "Task 2 (Independent): Implement Cursor Activity Stream",
+              "type": "independent",
+              "targetModel": "activity",
+              "activeTab": "editor",
+              "instructions": [
+                "Set take: limit",
+                "If cursorId is passed, add skip: 1 and cursor: { id: cursorId }",
+                "Order by id desc"
+              ],
+              "validation": {
+                "targetModel": "activity",
+                "requiredMethod": "findMany"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-08-challenge",
+        "title": "Day 8 Final Challenge: Production Catalog Search & Filter Engine",
+        "scenario": "Create a catalog search query combining price bounds (gte, lte), status check, sorting by price asc, and limiting to 5 items.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-8-1",
+            "title": "Step 1: Implement Filtered Catalog Query",
+            "type": "challenge",
+            "targetModel": "product",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.product.findMany",
+              "where price >= 10, price <= 150, status == \"IN_STOCK\"",
+              "take 5, orderBy: { price: \"asc\" }"
+            ],
+            "validation": {
+              "targetModel": "product",
+              "requiredMethod": "findMany",
+              "requiredWhereClauses": [
+                "price",
+                "status"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 9,
+      "id": "day-09",
+      "slug": "create-and-zod-validation",
+      "title": "create() + Zod Validation",
+      "shortTitle": "Create & Zod Validation",
+      "milestoneId": "milestone-3",
+      "description": "Safely accept user input, validate payloads with Zod schemas, and persist single and batch records with create() and createMany().",
+      "estimatedMinutes": 50,
+      "completionLearnings": [
+        "Mastered single inserts (create) and batched high-throughput inserts (createMany with skipDuplicates: true)",
+        "Defined runtime validation contracts with Zod schemas before data ever touches the database",
+        "Inferred TypeScript types directly from Zod schemas with z.infer<typeof Schema>"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-09-concept-1",
+          "order": 1,
+          "title": "Inserting Data (create(), createMany())",
+          "shortDescription": "Persist records safely into the database with single and batch inserts.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-9-1",
+              "title": "Task 1 (Guided): Create Category Record",
+              "type": "guided",
+              "targetModel": "category",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.category.create",
+                "Pass data: { name, slug }"
+              ],
+              "validation": {
+                "targetModel": "category",
+                "requiredMethod": "create"
+              }
+            },
+            {
+              "id": "task-9-2",
+              "title": "Task 2 (Independent): Bulk Insert Tags with skipDuplicates",
+              "type": "independent",
+              "targetModel": "tag",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.tag.createMany",
+                "Set data: tags and skipDuplicates: true"
+              ],
+              "validation": {
+                "targetModel": "tag",
+                "requiredMethod": "createMany"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-09-concept-2",
+          "order": 2,
+          "title": "Validating Input Payloads with Zod",
+          "shortDescription": "Never trust user input. Validate runtime payloads with Zod before writing to DB.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-9-3",
+              "title": "Task 1 (Guided): Define CreateProductSchema with Zod",
+              "type": "guided",
+              "targetModel": "zod",
+              "activeTab": "editor",
+              "instructions": [
+                "title: z.string().min(3)",
+                "price: z.number().positive()",
+                "sku: z.string().optional()"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-9-4",
+              "title": "Task 2 (Independent): Parse Input and Persist Product",
+              "type": "independent",
+              "targetModel": "product",
+              "activeTab": "editor",
+              "instructions": [
+                "const validated = CreateProductSchema.parse(rawBody)",
+                "return await prisma.product.create({ data: validated })"
+              ],
+              "validation": {
+                "targetModel": "product",
+                "requiredMethod": "create"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-09-challenge",
+        "title": "Day 9 Final Challenge: Secure User Registration Pipeline",
+        "scenario": "Create a user registration function that validates email and name, then inserts the user record.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-9-1",
+            "title": "Step 1: Validate and Create User",
+            "type": "challenge",
+            "targetModel": "user",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.user.create",
+              "data: { email, name }"
+            ],
+            "validation": {
+              "targetModel": "user",
+              "requiredMethod": "create"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 10,
+      "id": "day-10",
+      "slug": "updates-and-upserts",
+      "title": "update(), updateMany() & upsert()",
+      "shortTitle": "Updates & Upserts",
+      "milestoneId": "milestone-3",
+      "description": "Handle real update workflows, prevent race conditions with atomic numeric operations, apply bulk updates, and master idempotent upserts.",
+      "estimatedMinutes": 45,
+      "completionLearnings": [
+        "Used atomic numeric operators (increment, decrement) to eliminate race conditions in concurrent traffic",
+        "Applied bulk updates with updateMany across filtered sets of rows",
+        "Mastered the upsert pattern for page views, settings, and idempotent synchronizations"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-10-concept-1",
+          "order": 1,
+          "title": "Updating Single Records & Atomic Numeric Operations",
+          "shortDescription": "Prevent lost updates and race conditions using atomic database increments.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-10-1",
+              "title": "Task 1 (Guided): Update Customer Email by ID",
+              "type": "guided",
+              "targetModel": "customer",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.customer.update",
+                "where: { id }",
+                "data: { email: newEmail }"
+              ],
+              "validation": {
+                "targetModel": "customer",
+                "requiredMethod": "update",
+                "requiredWhereClauses": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "id": "task-10-2",
+              "title": "Task 2 (Independent): Atomically Decrement Product Stock",
+              "type": "independent",
+              "targetModel": "product",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.product.update",
+                "where: { id: productId }",
+                "data: { stock: { decrement: quantity } }"
+              ],
+              "validation": {
+                "targetModel": "product",
+                "requiredMethod": "update",
+                "requiredWhereClauses": [
+                  "id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-10-concept-2",
+          "order": 2,
+          "title": "Idempotent Workflows with upsert()",
+          "shortDescription": "Update if exists, insert if missing in one atomic query.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-10-3",
+              "title": "Task 1 (Guided): Upsert User Notification Preference",
+              "type": "guided",
+              "targetModel": "userPreference",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.userPreference.upsert",
+                "where: { userId }",
+                "update: { emailNotify }",
+                "create: { userId, emailNotify }"
+              ],
+              "validation": {
+                "targetModel": "userPreference",
+                "requiredMethod": "upsert",
+                "requiredWhereClauses": [
+                  "userId"
+                ]
+              }
+            },
+            {
+              "id": "task-10-4",
+              "title": "Task 2 (Independent): Record Page View with Atomic Upsert",
+              "type": "independent",
+              "targetModel": "pageView",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.pageView.upsert",
+                "where: { path: pagePath }",
+                "update: { views: { increment: 1 } }",
+                "create: { path: pagePath, views: 1 }"
+              ],
+              "validation": {
+                "targetModel": "pageView",
+                "requiredMethod": "upsert",
+                "requiredWhereClauses": [
+                  "path"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-10-challenge",
+        "title": "Day 10 Final Challenge: Inventory Reconciliation",
+        "scenario": "Implement a quantity increment on Product matching productId using atomic increment.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-10-1",
+            "title": "Step 1: Increment Product Stock",
+            "type": "challenge",
+            "targetModel": "product",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.product.update",
+              "where: { id: productId }",
+              "data: { stock: { increment: addedQty } }"
+            ],
+            "validation": {
+              "targetModel": "product",
+              "requiredMethod": "update",
+              "requiredWhereClauses": [
+                "id"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 11,
+      "id": "day-11",
+      "slug": "delete-referential-actions",
+      "title": "Delete & Referential Actions",
+      "shortTitle": "Deletes & Cascade Actions",
+      "milestoneId": "milestone-3",
+      "description": "Understand data integrity upon deletion, cascade deletes vs foreign key protection, referential action rules, and the soft-delete pattern.",
+      "estimatedMinutes": 45,
+      "completionLearnings": [
+        "Configured referential actions: onDelete: Cascade vs SetNull vs Restrict in schema.prisma",
+        "Understood how cascade deletes protect applications from orphaned records",
+        "Implemented the soft-delete pattern with deletedAt timestamps for compliance and data recovery"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-11-concept-1",
+          "order": 1,
+          "title": "Referential Actions (onDelete: Cascade, SetNull, Restrict)",
+          "shortDescription": "Control what happens to child records when a parent entity is deleted.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-11-1",
+              "title": "Task 1 (Guided): Configure onDelete: Cascade on OrderItem",
+              "type": "guided",
+              "targetModel": "OrderItem",
+              "activeTab": "schema",
+              "instructions": [
+                "In model OrderItem, add onDelete: Cascade to the order relation"
+              ],
+              "validation": {
+                "targetModel": "OrderItem"
+              }
+            },
+            {
+              "id": "task-11-2",
+              "title": "Task 2 (Independent): Configure onDelete: SetNull on Article Author",
+              "type": "independent",
+              "targetModel": "Article",
+              "activeTab": "schema",
+              "instructions": [
+                "Add onDelete: SetNull inside @relation for author in Article"
+              ],
+              "validation": {
+                "targetModel": "Article"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-11-concept-2",
+          "order": 2,
+          "title": "The Soft Deletion Pattern",
+          "shortDescription": "Protect audit trails and GDPR compliance by setting deletedAt instead of physical DELETE.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-11-3",
+              "title": "Task 1 (Guided): Implement Soft Delete Function",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.update",
+                "where: { id }",
+                "data: { deletedAt: new Date() }"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "update",
+                "requiredWhereClauses": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "id": "task-11-4",
+              "title": "Task 2 (Independent): Query Active (Non-Deleted) Accounts",
+              "type": "independent",
+              "targetModel": "account",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.account.findMany",
+                "where: { deletedAt: null }"
+              ],
+              "validation": {
+                "targetModel": "account",
+                "requiredMethod": "findMany",
+                "requiredWhereClauses": [
+                  "deletedAt"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-11-challenge",
+        "title": "Day 11 Final Challenge: Cascade Purge Pipeline",
+        "scenario": "Delete a post and ensure all associated comments are removed via cascade delete.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-11-1",
+            "title": "Step 1: Delete Target Post",
+            "type": "challenge",
+            "targetModel": "post",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.post.delete",
+              "where: { id: 4 }"
+            ],
+            "validation": {
+              "targetModel": "post",
+              "requiredMethod": "delete",
+              "requiredWhereClauses": [
+                "id"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 12,
+      "id": "day-12",
+      "slug": "nested-writes-transactions",
+      "title": "Nested Writes & Transactions",
+      "shortTitle": "Nested Writes & Transactions",
+      "milestoneId": "milestone-3",
+      "description": "Perform atomic multi-step operations using nested create/connect, sequential $transaction arrays, and interactive transaction functions.",
+      "estimatedMinutes": 55,
+      "completionLearnings": [
+        "Mastered nested writes: creating parents and related children in a single Prisma call with create, connect, and connectOrCreate",
+        "Understood sequential transactions (prisma.$transaction([op1, op2])) for bulk atomic execution",
+        "Implemented interactive transactions (prisma.$transaction(async (tx) => ...)) with rollback guarantees on failure"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-12-concept-1",
+          "order": 1,
+          "title": "Nested Writes (create, connect, connectOrCreate)",
+          "shortDescription": "Write parent and related child records simultaneously without manual foreign key plumbing.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-12-1",
+              "title": "Task 1 (Guided): Create Order with Nested Items",
+              "type": "guided",
+              "targetModel": "order",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.order.create",
+                "data: { customerId, items: { create: items } }"
+              ],
+              "validation": {
+                "targetModel": "order",
+                "requiredMethod": "create"
+              }
+            },
+            {
+              "id": "task-12-2",
+              "title": "Task 2 (Independent): Create Post Connecting Existing Author and Category",
+              "type": "independent",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.post.create",
+                "Connect author: { connect: { id: authorId } }",
+                "Connect category: { connect: { id: categoryId } }"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "create"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-12-concept-2",
+          "order": 2,
+          "title": "ACID Transactions (Sequential vs Interactive)",
+          "shortDescription": "Execute multi-step operations where all succeed or all roll back.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-12-3",
+              "title": "Task 1 (Guided): Wrap Updates in Sequential $transaction",
+              "type": "guided",
+              "targetModel": "product",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.$transaction([ ... ])",
+                "First item: prisma.product.update(...)",
+                "Second item: prisma.auditLog.create(...)"
+              ],
+              "validation": {
+                "targetModel": "product",
+                "requiredMethod": "$transaction"
+              }
+            },
+            {
+              "id": "task-12-4",
+              "title": "Task 2 (Independent): Interactive Transaction for Seat Booking",
+              "type": "independent",
+              "targetModel": "seat",
+              "activeTab": "editor",
+              "instructions": [
+                "Use prisma.$transaction(async (tx) => { ... })",
+                "Find seat with tx.seat.findUniqueOrThrow",
+                "If seat.isBooked, throw Error(\"Seat already booked\")",
+                "Update seat and create ticket with tx.ticket.create"
+              ],
+              "validation": {
+                "targetModel": "seat",
+                "requiredMethod": "$transaction"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-12-challenge",
+        "title": "Day 12 Final Challenge: Multi-Vendor Checkout Engine",
+        "scenario": "Implement an atomic checkout transaction: decrements stock and creates the order in a single transaction.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-12-1",
+            "title": "Step 1: Execute Checkout Transaction",
+            "type": "challenge",
+            "targetModel": "order",
+            "activeTab": "editor",
+            "instructions": [
+              "Use prisma.$transaction([ ... ])",
+              "Decrement product 101 stock by 1",
+              "Create order with orderNumber and total"
+            ],
+            "validation": {
+              "targetModel": "order",
+              "requiredMethod": "$transaction"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 13,
+      "id": "day-13",
+      "slug": "errors-and-middleware",
+      "title": "Errors + Express Error Middleware",
+      "shortTitle": "Errors & Middleware",
+      "milestoneId": "milestone-4",
+      "description": "Intercept Prisma error codes (P2002, P2025), prevent leaking database internals, and build clean Express HTTP error middleware.",
+      "estimatedMinutes": 50,
+      "completionLearnings": [
+        "Identified critical Prisma error codes: P2002 (unique constraint violation), P2025 (record not found), and P2003 (foreign key failure)",
+        "Built centralized Express error middleware mapping database errors to clean HTTP 409, 404, and 400 status responses",
+        "Hardened production APIs to prevent sensitive stack traces and SQL queries leaking to clients"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-13-concept-1",
+          "order": 1,
+          "title": "Prisma Error Classification & Error Codes",
+          "shortDescription": "Catch Prisma.PrismaClientKnownRequestError and inspect typed error codes.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-13-1",
+              "title": "Task 1 (Guided): Intercept P2002 Duplicate Email Error",
+              "type": "guided",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Check if error.code === \"P2002\"",
+                "Return { error: \"Email already taken\" }"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "create",
+                "expectedErrorCode": "P2002"
+              }
+            },
+            {
+              "id": "task-13-2",
+              "title": "Task 2 (Independent): Catch P2025 Record Not Found on Delete",
+              "type": "independent",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Attempt prisma.post.delete where: { id }",
+                "Catch P2025 error and return { error: \"Post not found\" }"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "delete",
+                "expectedErrorCode": "P2025"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-13-concept-2",
+          "order": 2,
+          "title": "Centralized Express Error Middleware",
+          "shortDescription": "Decouple route controllers from error formatting with centralized Express middleware.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-13-3",
+              "title": "Task 1 (Guided): Express Error Handler for P2002 and P2025",
+              "type": "guided",
+              "targetModel": "middleware",
+              "activeTab": "editor",
+              "instructions": [
+                "If err.code === \"P2002\", return res.status(409).json({ error: \"Resource already exists\" })",
+                "If err.code === \"P2025\", return res.status(404).json({ error: \"Resource not found\" })",
+                "Default to res.status(500).json({ error: \"Internal server error\" })"
+              ],
+              "validation": {}
+            },
+            {
+              "id": "task-13-4",
+              "title": "Task 2 (Independent): Extend Middleware with Zod 400 Validation",
+              "type": "independent",
+              "targetModel": "middleware",
+              "activeTab": "editor",
+              "instructions": [
+                "Check if err.name === \"ZodError\" or err instanceof ZodError",
+                "Return res.status(400).json({ error: \"Validation Error\", issues: err.issues })"
+              ],
+              "validation": {}
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-13-challenge",
+        "title": "Day 13 Final Challenge: Production API Error Hardening",
+        "scenario": "Implement an end-to-end safe create handler that returns HTTP 409 when a duplicate email occurs.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-13-1",
+            "title": "Step 1: Harden User Creation Against Duplicates",
+            "type": "challenge",
+            "targetModel": "user",
+            "activeTab": "editor",
+            "instructions": [
+              "Try to create user",
+              "If error is P2002, return { statusCode: 409, message: \"Duplicate email\" }"
+            ],
+            "validation": {
+              "targetModel": "user",
+              "requiredMethod": "create"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "day": 14,
+      "id": "day-14",
+      "slug": "production-rest-api",
+      "title": "Production REST API Capstone",
+      "shortTitle": "REST API Capstone",
+      "milestoneId": "milestone-4",
+      "description": "Put everything together to build an enterprise-grade REST API with Express/Next.js, Prisma, Zod, transactions, relations, and centralized error handling.",
+      "estimatedMinutes": 60,
+      "completionLearnings": [
+        "Architected clean multi-tier service layers separating HTTP transport from Prisma queries",
+        "Implemented full CRUD lifecycle: GET feed, POST creation with nested tags, PATCH partial updates, and DELETE with 204 status",
+        "Mastered the end-to-end production database engineering workflow with Prisma v7"
+      ],
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
+      "challengeTasksCount": 1,
+      "concepts": [
+        {
+          "id": "day-14-concept-1",
+          "order": 1,
+          "title": "Clean Architecture Layering (Router -> Controller -> Service)",
+          "shortDescription": "Decouple database logic from HTTP transport using dedicated Service classes.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-14-1",
+              "title": "Task 1 (Guided): Assemble PostService.getFeed",
+              "type": "guided",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.post.findMany",
+                "take: limit",
+                "include: { author: { select: { id: true, name: true } } }",
+                "orderBy: { createdAt: \"desc\" }"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "findMany",
+                "requiredIncludes": [
+                  "author"
+                ]
+              }
+            },
+            {
+              "id": "task-14-2",
+              "title": "Task 2 (Independent): Implement PostService.createPost with Tags",
+              "type": "independent",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.post.create",
+                "data: { title, authorId, tags: { create: tagNames.map(name => ({ name })) } }",
+                "include: { tags: true }"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "create"
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-14-concept-2",
+          "order": 2,
+          "title": "Full CRUD Lifecycle & Relational Integrity",
+          "shortDescription": "Tie together HTTP status codes (200, 201, 204, 400, 404, 409) with Prisma operations.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-14-3",
+              "title": "Task 1 (Guided): Delete Controller Handler (204 No Content)",
+              "type": "guided",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.post.delete where id: Number(req.params.id)",
+                "Return res.status(204).send()",
+                "Forward errors via next(err)"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "delete"
+              }
+            },
+            {
+              "id": "task-14-4",
+              "title": "Task 2 (Independent): Update Post Controller Handler",
+              "type": "independent",
+              "targetModel": "post",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.post.update where id: Number(req.params.id)",
+                "data: req.body",
+                "Return res.status(200).json(updated)"
+              ],
+              "validation": {
+                "targetModel": "post",
+                "requiredMethod": "update"
+              }
+            }
+          ]
+        }
+      ],
+      "finalChallenge": {
+        "id": "day-14-challenge",
+        "title": "Day 14 Capstone Project: Enterprise Publishing REST API",
+        "scenario": "Complete the final capstone: query the publishing platform feed with author select, comments count, and views counter.",
+        "tasksCount": 1,
+        "tasks": [
+          {
+            "id": "challenge-14-1",
+            "title": "Capstone Step: Build Feed with Relations and Analytics",
+            "type": "challenge",
+            "targetModel": "post",
+            "activeTab": "editor",
+            "instructions": [
+              "Call prisma.post.findMany",
+              "where: { published: true }",
+              "include: { author: { select: { id: true, name: true } }, comments: true }"
+            ],
+            "validation": {
+              "targetModel": "post",
+              "requiredMethod": "findMany",
+              "requiredIncludes": [
+                "author",
+                "comments"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
