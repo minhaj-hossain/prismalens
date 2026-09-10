@@ -20,11 +20,13 @@ import {
 } from './lib/progress/storage';
 import { Header } from './components/layout/Header';
 import { PrismaRoadmapView } from './components/roadmap/PrismaRoadmapView';
+import { DayOverviewView } from './components/learning/DayOverviewView';
 import { ConceptTheoryView } from './components/learning/ConceptTheoryView';
 import { LearningWorkspace } from './components/learning/LearningWorkspace';
 import { ErdVisualizer } from './components/learning/ErdVisualizer';
 import { SandboxPlayground } from './components/learning/SandboxPlayground';
 import { DayCompleteModal } from './components/learning/DayCompleteModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export type MainView = 'roadmap' | 'learn' | 'erd' | 'playground';
 export type DaySubStep = 'overview' | 'theory' | 'practice' | 'challenge';
@@ -179,68 +181,92 @@ export default function App() {
 
       {/* Main View Router */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* VIEW 1: Clean Homepage (The Roadmap & Execution Path) */}
-        {activeView === 'roadmap' && (
-          <PrismaRoadmapView
-            milestones={ALL_MILESTONES}
-            modules={ALL_MODULES}
-            progress={progress}
-            onSelectDay={handleSelectDayFromRoadmap}
-          />
-        )}
+        <ErrorBoundary>
+          {/* VIEW 1: Clean Homepage (The Roadmap & Execution Path) */}
+          {activeView === 'roadmap' && (
+            <PrismaRoadmapView
+              milestones={ALL_MILESTONES}
+              modules={ALL_MODULES}
+              progress={progress}
+              onSelectDay={handleSelectDayFromRoadmap}
+            />
+          )}
 
-        {/* VIEW 2: In-Day Sequential Learning Flow */}
-        {activeView === 'learn' && (
-          <>
-            {/* SUB-VIEW 2A: Concept Theory (Screen A: What problem does this solve, Pattern, Interactive widget, Quick check) */}
-            {daySubStep === 'theory' && (
-              <ConceptTheoryView
-                module={currentModule}
-                concept={currentConcept}
-                conceptIndex={currentConceptIndex >= 0 ? currentConceptIndex : 0}
-                totalConcepts={currentModule.concepts.length}
-                isCompleted={currentConcept.tasks.every((t) =>
-                  progress.completedTaskIds.includes(t.id)
-                )}
-                onBackToOverview={() => setActiveView('roadmap')}
-                onStartPractice={() => {
-                  setDaySubStep('practice');
-                  setActiveTaskId(undefined);
-                }}
-                onSelectConcept={(conceptId) => setActiveConceptId(conceptId)}
-              />
-            )}
+          {/* VIEW 2: In-Day Sequential Learning Flow */}
+          {activeView === 'learn' && (
+            <>
+              {/* SUB-VIEW 2A: Day Overview (Briefing, concepts, and launch actions) */}
+              {daySubStep === 'overview' && (
+                <DayOverviewView
+                  module={currentModule}
+                  progress={progress}
+                  onBackToRoadmap={() => setActiveView('roadmap')}
+                  onStartTheory={(conceptId) => {
+                    setActiveConceptId(conceptId);
+                    setDaySubStep('theory');
+                  }}
+                  onStartPractice={(conceptId, taskId) => {
+                    setActiveConceptId(conceptId);
+                    setActiveTaskId(taskId);
+                    setDaySubStep('practice');
+                  }}
+                  onStartChallenge={() => {
+                    setDaySubStep('challenge');
+                  }}
+                />
+              )}
 
-            {/* SUB-VIEW 2B: Practice Task / Challenge Split-Pane Workspace (Screen B: Left instructions only, Right Monaco + Console) */}
-            {(daySubStep === 'practice' || daySubStep === 'challenge') && (
-              <LearningWorkspace
-                module={currentModule}
-                engine={engine}
-                initialConceptId={activeConceptId}
-                initialTaskId={activeTaskId}
-                onViewTheory={(conceptId) => {
-                  setActiveConceptId(conceptId);
-                  setDaySubStep('theory');
-                }}
-                onBackToOverview={() => setActiveView('roadmap')}
-                onCompleteDay={handleCompleteDay}
-                isTaskCompleted={(id) => checkTaskCompleted(progress, id)}
-                onMarkTaskCompleted={handleMarkTaskCompleted}
-                onActiveTaskChange={(taskTitle) => setActiveTaskTitle(taskTitle)}
-              />
-            )}
-          </>
-        )}
+              {/* SUB-VIEW 2B: Concept Theory (Screen A: What problem does this solve, Pattern, Interactive widget, Quick check) */}
+              {daySubStep === 'theory' && (
+                <ConceptTheoryView
+                  module={currentModule}
+                  concept={currentConcept}
+                  conceptIndex={currentConceptIndex >= 0 ? currentConceptIndex : 0}
+                  totalConcepts={currentModule.concepts.length}
+                  isCompleted={currentConcept.tasks.every((t) =>
+                    progress.completedTaskIds.includes(t.id)
+                  )}
+                  onBackToOverview={() => setActiveView('roadmap')}
+                  onStartPractice={(conceptId, taskId) => {
+                    if (conceptId) setActiveConceptId(conceptId);
+                    if (taskId) setActiveTaskId(taskId);
+                    setDaySubStep('practice');
+                  }}
+                  onSelectConcept={(conceptId) => setActiveConceptId(conceptId)}
+                />
+              )}
 
-        {/* VIEW 3: Live Schema ERD Visualizer */}
-        {activeView === 'erd' && (
-          <div className="flex-1 h-[calc(100vh-3.5rem)] overflow-hidden">
-            <ErdVisualizer ast={schemaAst} />
-          </div>
-        )}
+              {/* SUB-VIEW 2C: Practice Task / Challenge Split-Pane Workspace (Screen B: Left instructions only, Right Monaco + Console) */}
+              {(daySubStep === 'practice' || daySubStep === 'challenge') && (
+                <LearningWorkspace
+                  module={currentModule}
+                  engine={engine}
+                  initialConceptId={activeConceptId}
+                  initialTaskId={activeTaskId}
+                  onViewTheory={(conceptId) => {
+                    setActiveConceptId(conceptId);
+                    setDaySubStep('theory');
+                  }}
+                  onBackToOverview={() => setActiveView('roadmap')}
+                  onCompleteDay={handleCompleteDay}
+                  isTaskCompleted={(id) => checkTaskCompleted(progress, id)}
+                  onMarkTaskCompleted={handleMarkTaskCompleted}
+                  onActiveTaskChange={(taskTitle) => setActiveTaskTitle(taskTitle)}
+                />
+              )}
+            </>
+          )}
 
-        {/* VIEW 4: Free-form Sandbox Playground */}
-        {activeView === 'playground' && <SandboxPlayground engine={engine} />}
+          {/* VIEW 3: Live Schema ERD Visualizer */}
+          {activeView === 'erd' && (
+            <div className="flex-1 h-[calc(100vh-3.5rem)] overflow-hidden">
+              <ErdVisualizer ast={schemaAst} />
+            </div>
+          )}
+
+          {/* VIEW 4: Free-form Sandbox Playground */}
+          {activeView === 'playground' && <SandboxPlayground engine={engine} />}
+        </ErrorBoundary>
       </main>
 
       {/* Day Completion Celebratory Modal */}

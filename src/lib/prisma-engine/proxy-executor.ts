@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { z } from 'zod';
-import { INITIAL_ECOM_FIXTURES } from '../../content/database/seed-schemas';
+import { INITIAL_ECOM_FIXTURES, ECOM_SCHEMA_PRISMA } from '../../content/database/seed-schemas';
 import { generateSqlFromPrismaCall, GeneratedSqlOutput } from './sql-generator';
 
 export class PrismaClientKnownRequestError extends Error {
@@ -50,9 +50,29 @@ export interface ExecutionResult {
 export class InBrowserPrismaEngine {
   private tables: Record<string, any[]> = {};
   public executionLogs: ExecutionLogItem[] = [];
+  public currentSchema: string = ECOM_SCHEMA_PRISMA;
 
   constructor() {
     this.reset();
+  }
+
+  public getSchemaContent(): string {
+    return this.currentSchema;
+  }
+
+  public updateSchema(newSchema: string): void {
+    this.currentSchema = newSchema;
+  }
+
+  public async executeCode(
+    userCode: string,
+    activeTab: 'editor' | 'schema' = 'editor'
+  ): Promise<ExecutionResult> {
+    return executeUserCode(userCode, this, activeTab);
+  }
+
+  public async executeUserQuery(userCode: string): Promise<ExecutionResult> {
+    return executeUserCode(userCode, this, 'editor');
   }
 
   public reset() {
@@ -579,6 +599,41 @@ export function inferTypeScriptType(data: any): string {
 }
 
 /**
+ * Strips TypeScript types and annotations so that valid TypeScript code can be evaluated in JavaScript runtime
+ */
+export function stripTypeScript(code: string): string {
+  let cleaned = code
+    // Remove imports
+    .replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/g, '')
+    // Remove type aliases & interface declarations
+    .replace(/(?:export\s+)?type\s+[A-Za-z0-9_]+\s*=\s*[^;]+;/g, '')
+    .replace(/(?:export\s+)?interface\s+[A-Za-z0-9_]+[\s\S]*?\}\n?/g, '')
+    // Remove export keywords
+    .replace(/export\s+(async\s+function|function|const|let|var|class)/g, '$1')
+    // Remove type casting: as Type
+    .replace(/\s+as\s+[a-zA-Z0-9_<>[\]]+/g, '');
+
+  // Strip function return types: ): Promise<...> { or ): Type {
+  cleaned = cleaned.replace(/\):\s*(?:Promise<[^>]+>|[a-zA-Z0-9_<>[\]|& ]+)\s*\{/g, ') {');
+  cleaned = cleaned.replace(/\):\s*(?:Promise<[^>]+>|[a-zA-Z0-9_<>[\]|& ]+)\s*=>/g, ') =>');
+
+  // Strip param types inside function declarations: function foo(a: string, b: number)
+  cleaned = cleaned.replace(/(function\s*[a-zA-Z0-9_]*\s*\()([^)]*)\)/g, (match, prefix, params) => {
+    const cleanedParams = params.split(',').map((p: string) => {
+      return p.replace(/:\s*[a-zA-Z0-9_<>[\]|&"']+/g, '').trim();
+    }).join(', ');
+    return prefix + cleanedParams + ')';
+  });
+
+  // Strip param types inside typed arrow functions: (a: string, b: number) =>
+  cleaned = cleaned.replace(/(\([^)]*\)\s*=>)/g, (match) => {
+    return match.replace(/:\s*[a-zA-Z0-9_<>[\]|&"']+/g, '');
+  });
+
+  return cleaned;
+}
+
+/**
  * Executes user code safely in the browser context with Prisma and Zod bindings
  */
 export async function executeUserCode(
@@ -605,13 +660,18 @@ export async function executeUserCode(
     const prisma = engine.createClientProxy();
 
     // Prepare evaluation context
-    // Wrap common export functions or bare expressions
-    let executableCode = userCode;
+    // Strip TypeScript types so user code can execute in browser JS
+    let executableCode = stripTypeScript(userCode);
 
-    // Remove imports
-    executableCode = executableCode
-      .replace(/import\s+.*?from\s+['"].*?['"];?/g, '')
-      .replace(/export\s+(async\s+function|function|const|class)/g, '$1');
+    // Extract any user defined functions to dynamically invoke if not explicitly handled
+    const fnMatches = Array.from(executableCode.matchAll(/(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g)).map(m => m[1]);
+    const dynamicInvokers = fnMatches.map(name => `
+      if (typeof ${name} === 'function') {
+        try { return await ${name}('alice@prisma.io'); } catch (_) {}
+        try { return await ${name}(1); } catch (_) {}
+        try { return await ${name}(); } catch (_) {}
+      }
+    `).join('\n');
 
     // Run in AsyncFunction wrapper
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -620,6 +680,12 @@ export async function executeUserCode(
 
       // Auto-invoke defined functions for evaluation
       if (typeof getUserById === 'function') return await getUserById(1);
+      if (typeof getUserNameOnly === 'function') return await getUserNameOnly(1);
+      if (typeof getUserByEmail === 'function') return await getUserByEmail('alice@prisma.io');
+      if (typeof getUserAuthCredentials === 'function') return await getUserAuthCredentials(1);
+      if (typeof getPublicProfile === 'function') return await getPublicProfile('alice@prisma.io');
+      if (typeof getUser === 'function') return await getUser('alice@prisma.io');
+      if (typeof auditUserQuery === 'function') return await auditUserQuery();
       if (typeof getActiveMember === 'function') return await getActiveMember('alice@prisma.io');
       if (typeof getProductBySku === 'function') return await getProductBySku('TECH-WIR-001');
       if (typeof getLatestDiscount === 'function') return await getLatestDiscount();
@@ -643,7 +709,20 @@ export async function executeUserCode(
       if (typeof recordInventoryChange === 'function') return await recordInventoryChange(101, 5);
       if (typeof bookSeat === 'function') return await bookSeat(1, 1);
       if (typeof safeCreateUser === 'function') return await safeCreateUser({ email: 'alice@prisma.io', name: 'Alice' });
+      if (typeof hardenedCreateUser === 'function') return await hardenedCreateUser({ email: 'alice@prisma.io', name: 'Alice' });
+      if (typeof registerUser === 'function') return await registerUser({ email: 'alice@prisma.io', name: 'Alice' });
       if (typeof safeDeletePost === 'function') return await safeDeletePost(9999);
+      if (typeof deletePostCascade === 'function') return await deletePostCascade(1);
+      if (typeof checkoutTransaction === 'function') return await checkoutTransaction(1, 101, 1);
+      if (typeof restockProduct === 'function') return await restockProduct(101, 10);
+      if (typeof filterCatalog === 'function') return await filterCatalog({ minPrice: 10 });
+      if (typeof getCapstoneFeed === 'function') return await getCapstoneFeed();
+      if (typeof getSecureAuthorFeed === 'function') return await getSecureAuthorFeed(1);
+      if (typeof seedAdminUser === 'function') return await seedAdminUser();
+      if (typeof seedCategories === 'function') return await seedCategories();
+      if (typeof seedWelcomeDiscount === 'function') return await seedWelcomeDiscount();
+      if (typeof dbHealthCheck === 'function') return await dbHealthCheck();
+      if (typeof handleRequest === 'function') return await handleRequest({ url: '/users' });
       if (typeof PostService !== 'undefined' && typeof PostService.getFeed === 'function') return await PostService.getFeed();
       if (typeof PostService !== 'undefined' && typeof PostService.createPost === 'function') return await PostService.createPost(1, 'Hello Prisma', ['tech']);
       if (typeof getGenerateCommand === 'function') return getGenerateCommand();
@@ -652,18 +731,21 @@ export async function executeUserCode(
       if (typeof createLoggedClient === 'function') return createLoggedClient();
       if (typeof setupGracefulShutdown === 'function') return setupGracefulShutdown(prisma);
       if (typeof deletePostHandler === 'function') {
-        const mockRes = { status: (c: number) => ({ send: () => ({ status: c }) }) };
+        const mockRes = { status: (c) => ({ send: () => ({ status: c }) }) };
         return await deletePostHandler({ params: { id: '1' } }, mockRes, () => {});
       }
       if (typeof updatePostHandler === 'function') {
-        const mockRes = { status: (c: number) => ({ json: (d: any) => d }) };
+        const mockRes = { status: (c) => ({ json: (d) => d }) };
         return await updatePostHandler({ params: { id: '1' }, body: { title: 'Updated' } }, mockRes, () => {});
       }
       if (typeof errorHandler === 'function' || typeof extendedErrorHandler === 'function') {
         const handler = typeof extendedErrorHandler === 'function' ? extendedErrorHandler : errorHandler;
-        const mockRes = { status: (c: number) => ({ json: (d: any) => ({ code: c, ...d }) }) };
+        const mockRes = { status: (c) => ({ json: (d) => ({ code: c, ...d }) }) };
         return handler(new Prisma.PrismaClientKnownRequestError('Unique error', { code: 'P2002' }), {}, mockRes, () => {});
       }
+
+      // Dynamic fallbacks for any custom function detected
+      ${dynamicInvokers}
 
       return { executed: true, logs: 'Code evaluated successfully' };
     `);

@@ -183,7 +183,7 @@ function validateSchemaTask(task: PracticeTask, schemaCode: string): TaskValidat
   const checklist: ValidationCheckItem[] = [];
 
   // Check models
-  if (task.validation.targetModel) {
+  if (task.validation.targetModel && task.validation.targetModel !== 'datasource' && task.validation.targetModel !== 'url') {
     const model = parsed.models.find(m => m.name.toLowerCase() === task.validation.targetModel?.toLowerCase());
     checklist.push({
       id: 'target_model_exists',
@@ -215,12 +215,53 @@ function validateSchemaTask(task: PracticeTask, schemaCode: string): TaskValidat
     });
   }
 
-  if (task.instructions.some(i => i.toLowerCase().includes('enum'))) {
+  if (task.instructions.some(i => /\benums?\b/i.test(i))) {
     const hasEnum = parsed.enums.length > 0 || schemaCode.includes('enum ');
     checklist.push({
       id: 'enum_present',
       label: 'Enum definition is present and valid',
       passed: hasEnum
+    });
+  }
+
+  // Check codeContains on schema
+  const normalizedSchema = schemaCode.replace(/\s+/g, ' ').toLowerCase();
+  if (task.validation.codeContains) {
+    for (let i = 0; i < task.validation.codeContains.length; i++) {
+      const pattern = task.validation.codeContains[i];
+      const normalizedPattern = pattern.replace(/\s+/g, ' ').toLowerCase();
+      const found = normalizedSchema.includes(normalizedPattern);
+      checklist.push({
+        id: `schema_contains_${i}`,
+        label: `Includes pattern: "${pattern}"`,
+        passed: found,
+        explanation: found ? undefined : `Schema is missing "${pattern}"`
+      });
+    }
+  }
+
+  // Check codeExcludes on schema
+  if (task.validation.codeExcludes) {
+    for (let i = 0; i < task.validation.codeExcludes.length; i++) {
+      const pattern = task.validation.codeExcludes[i];
+      const normalizedPattern = pattern.replace(/\s+/g, ' ').toLowerCase();
+      const excluded = !normalizedSchema.includes(normalizedPattern);
+      checklist.push({
+        id: `schema_excludes_${i}`,
+        label: `Does not include: "${pattern}"`,
+        passed: excluded,
+        explanation: excluded ? undefined : `Schema should not contain "${pattern}"`
+      });
+    }
+  }
+
+  if (checklist.length === 0) {
+    const hasContent = schemaCode.trim().length > 0 && parsed.models.length > 0;
+    checklist.push({
+      id: 'schema_valid',
+      label: 'Valid schema definitions provided',
+      passed: hasContent,
+      explanation: hasContent ? undefined : 'No valid models or definitions found in schema.'
     });
   }
 

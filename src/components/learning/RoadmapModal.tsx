@@ -80,7 +80,7 @@ export const RoadmapModal: React.FC<RoadmapModalProps> = ({
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                        Milestone {milestone.milestoneNumber}
+                        Milestone {milestone.number}
                       </span>
                       <h3 className="text-sm font-bold text-slate-100">{milestone.title}</h3>
                     </div>

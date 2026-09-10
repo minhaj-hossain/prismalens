@@ -22,6 +22,8 @@ export interface PrismaValidationRule {
   expectedErrorCode?: string;               // e.g. 'P2002' (unique key error), 'P2025' (not found)
   expectedRowCount?: number | { min?: number; max?: number };
   expectedResultSnippet?: Record<string, any>;
+  codeContains?: string[];                  // Substrings or patterns required in code or schema
+  codeExcludes?: string[];                  // Substrings or patterns forbidden in code or schema
   customValidator?: (codeAst: any, result: any, rawSql: string) => { valid: boolean; message?: string };
 }
 

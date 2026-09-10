@@ -162,9 +162,26 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model Student {
+  id         Int    @id @default(autoincrement())
+  name       String
+  age        Int
+  department String
+  city       String
+
+  @@map("students")
+}
 `;
 
 export const INITIAL_ECOM_FIXTURES: Record<string, any[]> = {
+  students: [
+    { id: 1, name: 'Rahim', age: 21, department: 'CSE', city: 'Dhaka' },
+    { id: 2, name: 'Karim', age: 22, department: 'EEE', city: 'Gazipur' },
+    { id: 3, name: 'Ayesha', age: 20, department: 'CSE', city: 'Dhaka' },
+    { id: 4, name: 'Sumaiya', age: 23, department: 'BBA', city: 'Chattogram' },
+    { id: 5, name: 'Tanvir', age: 21, department: 'CSE', city: 'Rajshahi' }
+  ],
   users: [
     { id: 1, email: 'alice@prisma.io', name: 'Alice Jenkins', role: 'ADMIN', age: 29, status: 'ACTIVE', createdAt: new Date('2024-01-10T08:00:00Z').toISOString() },
     { id: 2, email: 'bob@prisma.io', name: 'Bob Smith', role: 'USER', age: 34, status: 'ACTIVE', createdAt: new Date('2024-02-15T10:30:00Z').toISOString() },
