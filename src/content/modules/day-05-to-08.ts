@@ -26,8 +26,8 @@ export const MILESTONE_2_MODULES: ModuleData[] = [
       {
         id: 'day-05-concept-1',
         order: 1,
-        title: 'Prisma Migrate Workflow (migrate dev vs deploy)',
-        shortDescription: 'How Prisma compares schema against database state, writes SQL migrations, and applies them.',
+        title: 'Database Migrations: Local Development vs CI/CD Deploy',
+        shortDescription: 'Safely evolve database schemas in local development and automate migrations across CI/CD production pipelines.',
         theory: {
           summary: 'In local development, "npx prisma migrate dev" calculates the diff between schema.prisma and your database, writes a timestamped SQL migration file, applies it, and runs prisma generate. In production CI/CD, "npx prisma migrate deploy" applies pending migrations without diffing.',
           targetHero: {
@@ -127,8 +127,8 @@ model Order {
       {
         id: 'day-05-concept-2',
         order: 2,
-        title: 'Idempotent Seeding with prisma/seed.ts',
-        shortDescription: 'Write reproducible seeds using upsert to prevent unique constraint failures.',
+        title: 'Reliable Database Seeding with upsert()',
+        shortDescription: 'Populate essential roles, accounts, and test fixtures safely without triggering unique constraint errors.',
         theory: {
           summary: 'Database seeders populate initial data (roles, super-admins, test fixtures). If a seeder uses create, running it a second time crashes with unique constraint violations. An idempotent seeder uses upsert so it can be run repeatedly without failure.',
           targetHero: {
@@ -311,8 +311,8 @@ export async function seedCategories() {
       {
         id: 'day-06-concept-1',
         order: 1,
-        title: 'The Global PrismaClient Singleton Pattern',
-        shortDescription: 'Prevent "Too many connections" errors during development hot module reload.',
+        title: 'Connection Management: The PrismaClient Singleton Pattern',
+        shortDescription: 'Prevent connection pool exhaustion and memory leaks during backend development and server restarts.',
         theory: {
           summary: 'Each new PrismaClient() opens a dedicated connection pool to PostgreSQL. In development frameworks with Hot Module Reloading (Next.js, Vite, Express tsx), editing code re-runs files, creating new client instances until PostgreSQL exhausts its connection limit. Attaching the client to globalThis preserves the single connection pool across reloads.',
           targetHero: {
@@ -425,8 +425,8 @@ export async function handleRequest(req: any, res: any) {
       {
         id: 'day-06-concept-2',
         order: 2,
-        title: 'Query Logging & Graceful Disconnect',
-        shortDescription: 'Configure query telemetry and handle SIGINT / SIGTERM signals cleanly.',
+        title: 'Query Telemetry & Graceful Process Disconnection',
+        shortDescription: 'Configure production query observability and cleanly release database pools during service termination.',
         theory: {
           summary: 'Prisma Client supports rich logging configuration (query, info, warn, error). Setting log: [{ emit: "event", level: "query" }] lets you inspect query durations. On server termination, calling await prisma.$disconnect() closes open database sockets cleanly.',
           targetHero: {
@@ -578,8 +578,8 @@ prisma.$on('query', (e) => {
       {
         id: 'day-07-concept-1',
         order: 1,
-        title: 'Query Execution: findUnique, findFirst, findMany',
-        shortDescription: 'Master the fundamental read methods and their unique constraint rules.',
+        title: 'Reading Records: findUnique, findFirst & findMany',
+        shortDescription: 'Master the fundamental query methods and understand when to query by unique keys vs filter criteria.',
         theory: {
           summary: 'Prisma divides read queries by specificity: findUnique queries strictly by @id or @unique fields, returning 0 or 1 record. findFirst queries by any arbitrary condition and returns the first match. findMany returns an array of all matching rows.',
           targetHero: {
@@ -682,8 +682,8 @@ const user = await prisma.user.findUnique({
       {
         id: 'day-07-concept-2',
         order: 2,
-        title: 'Data Shaping (select) vs Relation Loading (include)',
-        shortDescription: 'The Golden Rule: Never combine select and include at the root of the same object.',
+        title: 'Query Projection vs Relation Loading: select vs include',
+        shortDescription: 'Balance payload sizes and eager relation loading without triggering Prisma root-level conflicts.',
         theory: {
           summary: 'select picks specific scalar columns to return. include eager-loads related models. The Golden Rule: you cannot use select and include at the same root level! If you need both scalar pruning and relations, nest select inside select.',
           targetHero: {
@@ -877,8 +877,8 @@ const userWithPosts = await prisma.user.findUnique({
       {
         id: 'day-08-concept-1',
         order: 1,
-        title: 'Advanced Filtering Operators (where, in, contains, AND, OR)',
-        shortDescription: 'Master range filters, text search, and logical operators.',
+        title: 'Advanced Query Filtering: Range, Search & Logical Operators',
+        shortDescription: 'Construct expressive database queries using case-insensitive search, array matching, and logical conditions.',
         theory: {
           summary: 'Prisma provides expressive filter operators: comparison (gte, lte, gt, lt), lists (in, notIn), text (contains, startsWith, endsWith with mode: "insensitive"), and boolean logic (AND, OR, NOT).',
           targetHero: {
@@ -992,8 +992,8 @@ const userWithPosts = await prisma.user.findUnique({
       {
         id: 'day-08-concept-2',
         order: 2,
-        title: 'Pagination Strategies (Offset vs Cursor-Based)',
-        shortDescription: 'Compare skip/take offset pagination against cursor-based infinite scrolling.',
+        title: 'Pagination at Scale: Offset vs Cursor-Based Strategies',
+        shortDescription: 'Choose between offset pagination for fixed page numbers and cursor pagination for high-volume feeds.',
         theory: {
           summary: 'Offset pagination (skip, take) is simple for page numbers ("Page 3"), but slow on deep pages because the database must scan and discard thousands of rows. Cursor pagination (cursor, take, skip: 1) jumps directly to an indexed record, delivering constant-time O(1) performance.',
           targetHero: {

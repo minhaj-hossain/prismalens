@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
@@ -10,6 +10,8 @@ export interface SyntaxTokenizedEditorProps {
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLDivElement>) => void;
   onRunQuery?: () => void;
+  onPrimaryAction?: () => void;
+  minHeight?: string;
   textareaRef?: any;
   placeholder?: string;
   readOnly?: boolean;
@@ -312,21 +314,22 @@ export function getTokenClasses(type: TokenType): string {
   }
 }
 
-// CodeMirror Professional Dark Theme
+// CodeMirror Professional Dark Theme with Adaptive Height Support
 const prismaDarkTheme = EditorView.theme(
   {
     '&': {
       backgroundColor: '#02050B !important',
       color: '#f1f5f9',
-      height: '100%',
       width: '100%',
+      minHeight: '280px',
       fontSize: '13px',
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
     },
     '.cm-content': {
       caretColor: '#38bdf8',
       padding: '16px',
-      lineHeight: '1.6'
+      lineHeight: '1.6',
+      minHeight: '280px'
     },
     '.cm-cursor, .cm-dropCursor': {
       borderLeftColor: '#38bdf8',
@@ -339,7 +342,8 @@ const prismaDarkTheme = EditorView.theme(
       backgroundColor: '#010408',
       color: '#475569',
       borderRight: '1px solid rgba(14, 165, 233, 0.15)',
-      paddingRight: '6px'
+      paddingRight: '6px',
+      minHeight: '280px'
     },
     '.cm-lineNumbers .cm-gutterElement': {
       paddingLeft: '10px',
@@ -362,7 +366,7 @@ const prismaDarkTheme = EditorView.theme(
     '.cm-scroller': {
       overflow: 'auto',
       fontFamily: 'inherit',
-      height: '100%'
+      minHeight: '280px'
     }
   },
   { dark: true }
@@ -387,43 +391,58 @@ export const SyntaxTokenizedEditor: React.FC<SyntaxTokenizedEditorProps> = ({
   onChange,
   onKeyDown,
   onRunQuery,
+  onPrimaryAction,
+  minHeight = '280px',
   placeholder = '// Write your Prisma query here...',
   readOnly = false
 }) => {
+  // Keep action ref updated so keymap closures always invoke current action
+  const actionRef = useRef<(() => void) | undefined>(undefined);
+  actionRef.current = onPrimaryAction || onRunQuery;
+
   const extensions = useMemo(() => {
     const ext = [
       javascript({ typescript: true }),
       syntaxHighlighting(prismaHighlightStyle),
-      prismaDarkTheme
-    ];
-
-    if (onRunQuery) {
-      ext.push(
-        keymap.of([
-          {
-            key: 'Mod-Enter',
-            run: () => {
-              onRunQuery();
+      prismaDarkTheme,
+      keymap.of([
+        {
+          key: 'Mod-Enter',
+          run: () => {
+            if (actionRef.current) {
+              actionRef.current();
               return true;
             }
+            return false;
           }
-        ])
-      );
-    }
+        },
+        {
+          key: 'Ctrl-Enter',
+          run: () => {
+            if (actionRef.current) {
+              actionRef.current();
+              return true;
+            }
+            return false;
+          }
+        }
+      ])
+    ];
 
     return ext;
-  }, [onRunQuery]);
+  }, []);
 
   return (
     <div
-      className="relative flex-1 w-full h-full flex bg-[#02050B] overflow-hidden"
+      className="relative w-full flex flex-col bg-[#02050B]"
+      style={{ minHeight }}
       onKeyDown={onKeyDown}
     >
       <CodeMirror
         value={value}
-        height="100%"
+        minHeight={minHeight}
         width="100%"
-        className="w-full h-full flex-1"
+        className="w-full"
         theme="none"
         extensions={extensions}
         onChange={onChange}

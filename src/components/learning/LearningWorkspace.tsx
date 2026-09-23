@@ -250,18 +250,6 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     }
   };
 
-  // Keyboard shortcut Ctrl+Enter / Cmd+Enter
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleRunQuery();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorCode]);
-
   // Navigation handlers
   const handleNextStep = () => {
     if (activeStep.type === 'concept') {
@@ -363,6 +351,22 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
       handleRunQuery();
     }
   };
+
+  // Keep primaryActionRef synced for keyboard shortcut invocation
+  const primaryActionRef = useRef<(() => void) | undefined>(undefined);
+  primaryActionRef.current = handlePrimaryAction;
+
+  // Global Keyboard shortcut Ctrl+Enter / Cmd+Enter for Run & Check AND Next
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        primaryActionRef.current?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Metadata calculations for Task criteria
   const targetModelDisplay = (activeTask.targetModel || 'student').toLowerCase();
@@ -790,7 +794,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
         {/* ============================================================= */}
         {/* RIGHT PANE: Code IDE Editor + Docked Reactive Results Drawer  */}
         {/* ============================================================= */}
-        <div className="w-full lg:w-[55%] flex flex-col h-full bg-[#03070E] overflow-hidden">
+        <div className="w-full lg:w-[55%] flex flex-col h-full bg-[#03070E] overflow-y-auto">
           {activeStep.type === 'challenge' && !hasAcceptedChallenge ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#020612] text-center overflow-y-auto">
               <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/30 via-[#071326] to-[#030814] shadow-2xl space-y-5">
@@ -848,7 +852,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
           ) : (
             <>
               {/* Top IDE Window Header */}
-          <div className="h-10 px-4 bg-[#071222] border-b border-sky-950/80 flex items-center justify-between shrink-0 font-mono text-xs">
+          <div className="h-10 px-4 bg-[#071222] border-b border-sky-950/80 flex items-center justify-between shrink-0 font-mono text-xs sticky top-0 z-20">
             {/* Window Dots & Tab */}
             <div className="flex items-center space-x-3">
               <div className="flex space-x-1.5">
@@ -899,18 +903,20 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
             </div>
           </div>
 
-          {/* Editor Body: Full Proportional Height */}
-          <div className="flex-1 flex overflow-hidden bg-[#02050B]">
+          {/* Editor Body: Proper Height & Dynamic Growth as User Enters Lines */}
+          <div className="w-full bg-[#02050B] min-h-[280px] shrink-0">
             <SyntaxTokenizedEditor
               value={editorCode}
               onChange={handleEditorCodeChange}
-              onRunQuery={handleRunQuery}
+              onRunQuery={handlePrimaryAction}
+              onPrimaryAction={handlePrimaryAction}
+              minHeight="280px"
               placeholder="// Write your Prisma query here..."
             />
           </div>
 
           {/* Editor Status & Action Bar */}
-          <div className="px-4 py-2.5 bg-[#06101E] border-t border-sky-950/80 flex items-center justify-between shrink-0 font-mono text-xs">
+          <div className="px-4 py-2.5 bg-[#06101E] border-t border-sky-950/80 flex items-center justify-between shrink-0 font-mono text-xs sticky bottom-0 sm:static z-10 shadow-lg">
             {/* Left: Quick tokens scroll bar */}
             <div className="flex items-center space-x-1.5 overflow-x-auto max-w-[50%] py-0.5">
               <span className="text-slate-500 font-bold uppercase text-[10px] mr-0.5 shrink-0">
@@ -943,8 +949,24 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
             {/* Right: Back & Unified Run / Next Action Button */}
             <div className="flex items-center space-x-2 ml-auto shrink-0">
-              <span className="text-slate-500 text-[11px] hidden xl:inline mr-2">
-                Ctrl + Enter to run
+              <span className="text-slate-400 text-[11px] hidden sm:inline mr-1 font-mono">
+                {validationResult?.passed ? (
+                  <span className="text-emerald-400 font-semibold flex items-center space-x-1">
+                    <span>Press</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[10px]">
+                      Ctrl + Enter
+                    </kbd>
+                    <span>for Next</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center space-x-1 text-slate-400">
+                    <span>Press</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-800 text-[10px] text-sky-300">
+                      Ctrl + Enter
+                    </kbd>
+                    <span>to Run & Check</span>
+                  </span>
+                )}
               </span>
 
               <button
@@ -958,6 +980,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
               <button
                 onClick={handlePrimaryAction}
                 disabled={isExecuting}
+                title={validationResult?.passed ? "Next Step (Ctrl + Enter)" : "Run & Check (Ctrl + Enter)"}
                 className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-lg font-mono font-bold text-xs shadow-md transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                   validationResult?.passed
                     ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-emerald-400/20'
@@ -973,11 +996,17 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                   <>
                     <span>{nextButtonLabel}</span>
                     <ArrowRight className="w-4 h-4" />
+                    <span className="text-[10px] bg-emerald-900/60 text-emerald-200 px-1.5 py-0.5 rounded ml-1 font-mono hidden md:inline">
+                      Ctrl+↵
+                    </span>
                   </>
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-slate-950" />
                     <span>Run & Check</span>
+                    <span className="text-[10px] bg-sky-900/60 text-sky-200 px-1.5 py-0.5 rounded ml-1 font-mono hidden md:inline">
+                      Ctrl+↵
+                    </span>
                   </>
                 )}
               </button>
@@ -994,7 +1023,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                 <Terminal className="w-3.5 h-3.5 text-sky-400" />
                 <span className="font-semibold text-slate-300">Results Console</span>
                 <span className="text-slate-500 hidden sm:inline">
-                  — Press Ctrl + Enter or click Run & Check
+                  — Press <kbd className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-800 text-[10px] text-sky-300 font-mono">Ctrl + Enter</kbd> or click Run & Check
                 </span>
               </div>
               <span className="text-[11px] text-slate-500">Ready</span>
@@ -1012,8 +1041,8 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
           {/* EXECUTED RESULTS DRAWER */}
           {executionResult && !isExecuting && (
             <div
-              className={`border-t border-sky-950/80 bg-[#040A14] flex flex-col transition-all duration-200 ${
-                isDrawerCollapsed ? 'h-9' : 'h-[44%] min-h-[220px]'
+              className={`border-t border-sky-950/80 bg-[#040A14] flex flex-col transition-all duration-200 shrink-0 ${
+                isDrawerCollapsed ? 'h-9' : 'min-h-[260px]'
               }`}
             >
               {/* Drawer Bar */}

@@ -62,11 +62,12 @@ export const MonacoCodeEditor: React.FC<CodeEditorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lineCount = Math.max((currentVal || '').split('\n').length, 12);
+  const lineCount = Math.max((currentVal || '').split('\n').length, 14);
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
+  const dynamicHeight = Math.max(280, lineCount * 21 + 32);
 
   return (
-    <div className="flex flex-col h-full rounded-xl border border-slate-800 bg-[#0B0F19] overflow-hidden shadow-2xl">
+    <div className="flex flex-col rounded-xl border border-slate-800 bg-[#0B0F19] overflow-hidden shadow-2xl">
       {/* Editor Header Bar (optional) */}
       {!hideHeader && (
         <div className="flex items-center justify-between px-3.5 py-2 border-b border-slate-800 bg-[#111827]/90">
@@ -114,7 +115,7 @@ export const MonacoCodeEditor: React.FC<CodeEditorProps> = ({
                 <Play className="w-3.5 h-3.5 fill-white" />
                 <span>{isExecuting ? 'Running...' : 'Run Query'}</span>
                 <span className="hidden sm:inline-block text-[10px] bg-indigo-700/60 px-1 py-0.2 rounded font-mono text-indigo-200">
-                  ⌘↵
+                  Ctrl+↵
                 </span>
               </button>
             )}
@@ -122,8 +123,11 @@ export const MonacoCodeEditor: React.FC<CodeEditorProps> = ({
         </div>
       )}
 
-      {/* Editor Body with Line Numbers */}
-      <div className="flex flex-1 min-h-[260px] overflow-hidden relative font-mono text-xs leading-relaxed">
+      {/* Editor Body with Line Numbers - Dynamically increases with lines */}
+      <div
+        className="flex min-h-[280px] overflow-hidden relative font-mono text-xs leading-relaxed"
+        style={{ height: `${dynamicHeight}px` }}
+      >
         {/* Line Numbers Column */}
         <div className="select-none py-3 px-2.5 bg-[#080C14] border-r border-slate-800/80 text-right text-slate-600 text-[11px] font-mono shrink-0">
           {lineNumbers.map((n) => (
@@ -155,7 +159,7 @@ export const MonacoCodeEditor: React.FC<CodeEditorProps> = ({
           <span>Prisma v7 Client Simulation</span>
         </div>
         <div>
-          <span>Press ⌘+Enter to Run</span>
+          <span>Press Ctrl + Enter to Run</span>
         </div>
       </div>
     </div>

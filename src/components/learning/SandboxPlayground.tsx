@@ -163,9 +163,9 @@ export const SandboxPlayground: React.FC<SandboxPlaygroundProps> = ({ engine }) 
       </div>
 
       {/* Main Workspace Split */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 overflow-y-auto">
         {/* Left Side: Editor & Schema Tabs */}
-        <div className="flex flex-col h-full space-y-3 overflow-hidden">
+        <div className="flex flex-col h-full space-y-3 overflow-y-auto">
           <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
             <button
               onClick={() => setActiveTab('editor')}
@@ -189,7 +189,7 @@ export const SandboxPlayground: React.FC<SandboxPlaygroundProps> = ({ engine }) 
             </button>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             {activeTab === 'editor' ? (
               <MonacoCodeEditor
                 value={code}

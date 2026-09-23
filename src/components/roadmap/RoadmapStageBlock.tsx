@@ -5,6 +5,7 @@ import {
   calculateDayProgress,
   isDayUnlocked,
   isDayCompleted,
+  isConceptCompleted,
   resolveDayResumeTarget
 } from '../../lib/progress/storage';
 import { Check, Lock, ChevronRight, Play } from 'lucide-react';
@@ -103,54 +104,27 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
     ? (selectedModule.shortTitle || selectedModule.title).replace(/^Day\s+\d+\s*[-—:]\s*/i, '')
     : '';
 
-  // Helper to keep card sentences clear, punchy, and concise
-  const formatConciseCardText = (title?: string, description?: string): string => {
-    let text = (title || description || '').trim();
-    text = text.replace(/^(Task\s+\d+|Query|Concept\s+\d+|Step\s+\d+|Prisma)[\s:–—-]+/i, '').trim();
-    if (text.length > 55) {
-      const firstSentence = text.split(/[.!?]/)[0].trim();
-      if (firstSentence.length >= 8 && firstSentence.length <= 55) {
-        return firstSentence;
-      }
-      return text.substring(0, 52).trim() + '...';
-    }
-    return text;
-  };
+  // Extract concept items for the day card: only concept names, no tasks
+  const cardConcepts = selectedModule ? selectedModule.concepts : [];
+  const firstIncompleteConceptIndex = cardConcepts.findIndex(
+    c => !isConceptCompleted(progress, c)
+  );
 
-  // Extract up to 4 core items from concepts/tasks
-  const allTasks = selectedModule ? selectedModule.concepts.flatMap(c =>
-    c.tasks.map(t => ({
-      ...t,
-      conceptId: c.id
-    }))
-  ) : [];
+  const cardItems: CardItem[] = cardConcepts.map((c, idx) => {
+    const isCompleted = isConceptCompleted(progress, c);
+    const isCurrent = idx === (firstIncompleteConceptIndex >= 0 ? firstIncompleteConceptIndex : 0);
+    const nextTask = c.tasks.find(t => !progress.completedTaskIds.includes(t.id)) || c.tasks[0];
 
-  const firstUncompletedIndex = allTasks.findIndex(t => !progress.completedTaskIds.includes(t.id));
-  const displayTasks = allTasks.slice(0, 4);
-  const cardItems: CardItem[] = displayTasks.map((t, idx) => ({
-    id: t.id,
-    number: idx + 1,
-    text: formatConciseCardText(t.title, t.description),
-    conceptId: t.conceptId,
-    taskId: t.id,
-    isCompleted: progress.completedTaskIds.includes(t.id),
-    isCurrent: idx === (firstUncompletedIndex >= 0 ? firstUncompletedIndex : 0)
-  }));
-
-  if (cardItems.length < 4 && selectedModule?.completionLearnings) {
-    const needed = 4 - cardItems.length;
-    for (let i = 0; i < needed && i < selectedModule.completionLearnings.length; i++) {
-      cardItems.push({
-        id: `learning-${i}`,
-        number: cardItems.length + 1,
-        text: formatConciseCardText(selectedModule.completionLearnings[i]),
-        conceptId: selectedModule.concepts[0]?.id || '',
-        taskId: selectedModule.concepts[0]?.tasks[0]?.id || '',
-        isCompleted: dayProgress.isCompleted,
-        isCurrent: false
-      });
-    }
-  }
+    return {
+      id: c.id,
+      number: idx + 1,
+      text: c.title,
+      conceptId: c.id,
+      taskId: nextTask?.id || '',
+      isCompleted,
+      isCurrent
+    };
+  });
 
   // Challenge progress
   const challengeTasks = selectedModule?.challenge?.tasks || [];
@@ -393,7 +367,10 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
 
                 {/* Text Description */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-sans text-xs sm:text-[13px] text-slate-200 group-hover:text-white leading-relaxed transition-colors">
+                  <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-sky-400/80 group-hover:text-sky-300 mb-0.5 transition-colors">
+                    Concept {item.number}
+                  </div>
+                  <p className="font-sans font-medium text-xs sm:text-[13px] text-slate-200 group-hover:text-white leading-snug transition-colors">
                     {item.text}
                   </p>
                 </div>

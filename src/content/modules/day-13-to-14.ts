@@ -26,8 +26,8 @@ export const MILESTONE_4_MODULES: ModuleData[] = [
       {
         id: 'day-13-concept-1',
         order: 1,
-        title: 'Prisma Error Classification & Error Codes',
-        shortDescription: 'Catch Prisma.PrismaClientKnownRequestError and inspect typed error codes.',
+        title: 'Error Handling: Categorizing Prisma Known Request Errors',
+        shortDescription: 'Catch known database constraint errors and inspect standardized error codes like P2002 and P2025.',
         theory: {
           summary: 'When a database operation violates a constraint, Prisma throws a PrismaClientKnownRequestError containing a standardized code. Key production codes include P2002 (Unique constraint failed), P2025 (Record to update/delete not found), and P2003 (Foreign key constraint violation).',
           targetHero: {
@@ -159,8 +159,8 @@ try {
       {
         id: 'day-13-concept-2',
         order: 2,
-        title: 'Centralized Express Error Middleware',
-        shortDescription: 'Decouple route controllers from error formatting with centralized Express middleware.',
+        title: 'Centralized API Error Handling in Express',
+        shortDescription: 'Transform raw database exceptions into standardized HTTP error responses across all REST endpoints.',
         theory: {
           summary: 'Individual API route handlers should never repeat try/catch status code formatting. Centralized Express error middleware (err, req, res, next) intercepts all forwarded errors, converts P2002 to HTTP 409 Conflict, P2025 to HTTP 404 Not Found, and ZodError to HTTP 400 Bad Request.',
           targetHero: {
@@ -344,8 +344,8 @@ export function prismaErrorHandler(err: any, req: Request, res: Response, next: 
       {
         id: 'day-14-concept-1',
         order: 1,
-        title: 'Clean Architecture Layering (Router -> Controller -> Service)',
-        shortDescription: 'Decouple database logic from HTTP transport using dedicated Service classes.',
+        title: 'Clean Layered Architecture: Controllers & Service Layers',
+        shortDescription: 'Decouple database operations from HTTP transport layers for maintainable, testable backends.',
         theory: {
           summary: 'In enterprise applications, Prisma calls should live in a dedicated Service layer (e.g. PostService). Route controllers simply parse requests, pass parameters to services, and send HTTP responses. This makes code testable, reusable, and framework-agnostic.',
           targetHero: {
@@ -484,8 +484,8 @@ export class PostService {
       {
         id: 'day-14-concept-2',
         order: 2,
-        title: 'Full CRUD Lifecycle & Relational Integrity',
-        shortDescription: 'Tie together HTTP status codes (200, 201, 204, 400, 404, 409) with Prisma operations.',
+        title: 'End-to-End RESTful CRUD with Relational Validation',
+        shortDescription: 'Pair proper HTTP semantics and status codes with Prisma database queries in a complete production API.',
         theory: {
           summary: 'A production REST API pairs HTTP semantics with Prisma methods: GET -> 200 OK (findMany/findUnique), POST -> 201 Created (create with Zod), PATCH -> 200 OK (update with atomic counters), and DELETE -> 204 No Content (delete with cascade safety).',
           targetHero: {

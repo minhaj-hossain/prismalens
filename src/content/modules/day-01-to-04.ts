@@ -27,8 +27,8 @@ export const MILESTONE_1_MODULES: ModuleData[] = [
       {
         id: 'day-01-concept-1',
         order: 1,
-        title: 'The Type-Safety Gap: Why Raw SQL Fails TypeScript',
-        shortDescription: 'Why raw SQL strings leave your backend blind to typos and schema changes, and how Prisma gives your database queries real compile-time guarantees.',
+        title: 'End-to-End Type Safety: Why Raw SQL Fails TypeScript',
+        shortDescription: 'How Prisma bridges the runtime gap between database tables and TypeScript with full compile-time query guarantees.',
         theory: {
           summary: `When you query a database using raw database drivers (like pg or mysql2) in Node.js, your SQL query is treated as an opaque string:
 db.query('SELECT id, name, email FROM users WHERE id = $1', [userId])
@@ -217,8 +217,8 @@ export async function getUserByEmail(email: string) {
       {
         id: 'day-01-concept-2',
         order: 2,
-        title: 'Lean Projections: Why SELECT * Hurts Production Apps',
-        shortDescription: 'Why fetching entire database rows degrades performance, and how Prisma select shapes both network payloads and TypeScript types.',
+        title: 'Optimizing Query Payloads: select vs SELECT *',
+        shortDescription: 'Eliminate database over-fetching and shape precise TypeScript types using targeted field selection.',
         theory: {
           summary: `When developers query database tables without specifying columns, the database defaults to SELECT * (fetching every column on the row). In a small toy app, this seems harmless. In production, it creates severe problems:
 
@@ -363,8 +363,8 @@ export async function getStudentDirectory() {
       {
         id: 'day-01-concept-3',
         order: 3,
-        title: 'The Prisma Triad: Schema, Client, and Migrate',
-        shortDescription: 'How schema.prisma, Prisma Client, and Prisma Migrate coordinate to keep your database, SQL migrations, and TypeScript types in perfect sync.',
+        title: 'The Core Prisma Architecture: Schema, Client & Migrations',
+        shortDescription: 'How schema models, generated client methods, and migration files coordinate to keep databases and code in sync.',
         theory: {
           summary: `Prisma is not a monolithic library; it is a coordinated toolchain composed of three distinct parts:
 
@@ -566,8 +566,8 @@ export async function getUser(email: string) {
       {
         id: 'day-02-concept-1',
         order: 1,
-        title: 'Datasource Architecture & Connection Pooling in Cloud Backends',
-        shortDescription: 'How Prisma connects to PostgreSQL, and why serverless environments require connection poolers to prevent database connection exhaustion.',
+        title: 'Datasource Architecture & Serverless Connection Pooling',
+        shortDescription: 'How Prisma manages PostgreSQL connections and scales reliably under serverless concurrency limits.',
         theory: {
           summary: `Every Prisma application starts with the datasource block in schema.prisma. It specifies the database provider ("postgresql", "mysql", "sqlite") and the connection URL:
 
@@ -683,8 +683,8 @@ generator client {
       {
         id: 'day-02-concept-2',
         order: 2,
-        title: 'The Naming Bridge: Mapping snake_case SQL to camelCase TypeScript',
-        shortDescription: 'How to use @map and @@map to write clean, idiomatic TypeScript while preserving legacy database table and column names.',
+        title: 'Schema Mapping: Bridging snake_case SQL & camelCase Models',
+        shortDescription: 'Maintain clean, idiomatic TypeScript models while seamlessly preserving legacy database naming conventions.',
         theory: {
           summary: `In relational database design, table and column names almost universally adhere to snake_case conventions:
 - Tables: tbl_customers, user_audit_logs, order_items
@@ -866,8 +866,8 @@ Neither attribute alters your database schema. They act as a compile-time transl
       {
         id: 'day-03-concept-1',
         order: 1,
-        title: 'Scalar Types, Nullability & The Precision Problem',
-        shortDescription: 'Why floating-point numbers corrupt financial data, how cuid() provides distributed IDs, and how nullability works in schema.prisma.',
+        title: 'Field Types, Nullability & Precision: Decimal vs Float',
+        shortDescription: 'Prevent financial calculation errors, configure non-nullable fields, and generate collision-free identifiers.',
         theory: {
           summary: `In TypeScript and JavaScript, all standard numbers are 64-bit binary floating-point numbers (IEEE 754). This creates subtle calculation errors:
 0.1 + 0.2 // equals 0.30000000000000004!
@@ -990,8 +990,8 @@ For identifiers, autoincrementing integers (1, 2, 3...) are predictable and expo
       {
         id: 'day-03-concept-2',
         order: 2,
-        title: 'Enforcing Invariants: Enums & Multi-Field Constraints',
-        shortDescription: 'How Enums eliminate arbitrary string bugs, and how composite constraints (@@unique, @@id) prevent duplicate data in relational tables.',
+        title: 'Data Integrity: Enums & Multi-Field Unique Constraints',
+        shortDescription: 'Enforce strict business rules at the schema level using typed enums and composite constraints.',
         theory: {
           summary: `Storing status values as raw strings (e.g. status String) is an anti-pattern. A typo like "pendng" or "canclled" will bypass TypeScript if passed dynamically and corrupt database state.
 
@@ -1187,8 +1187,8 @@ model Order {
       {
         id: 'day-04-concept-1',
         order: 1,
-        title: 'One-to-Many (1:N): Scalar Columns vs Virtual Relation Fields',
-        shortDescription: 'How foreign keys link tables, and why Prisma cleanly separates the SQL column from the TypeScript navigation property.',
+        title: 'One-to-Many Relations: Foreign Keys vs Relation Fields',
+        shortDescription: 'Understand how Prisma separates underlying SQL foreign keys from ergonomic TypeScript relation properties.',
         theory: {
           summary: `In relational databases, relationships are formed using Foreign Keys. In a One-to-Many (1:N) relationship (e.g. an Author has many Books), the foreign key column always lives on the "Many" table (Book).
 
@@ -1335,8 +1335,8 @@ model Employee {
       {
         id: 'day-04-concept-2',
         order: 2,
-        title: 'One-to-One (1:1): The @unique Mandate',
-        shortDescription: 'Why omitting @unique on a foreign key accidentally creates a 1:Many relation, and how 1:1 relations enforce strict pairing.',
+        title: 'One-to-One Relations: Enforcing Strict Pairs with @unique',
+        shortDescription: 'Guarantee strict 1:1 entity associations by placing unique constraints on foreign key columns.',
         theory: {
           summary: `A One-to-One (1:1) relationship links exactly one record to at most one other record (such as a User and their private Profile, or a Driver and their License).
 

@@ -4,7 +4,8 @@ import {
   UserProgressState,
   calculateDayProgress,
   isDayUnlocked,
-  isDayCompleted
+  isDayCompleted,
+  isConceptCompleted
 } from '../../lib/progress/storage';
 import { Check, Lock, ChevronRight, BookOpen, ArrowRight } from 'lucide-react';
 
@@ -91,44 +92,27 @@ export const RoadmapDayBox: React.FC<RoadmapDayBoxProps> = ({
   const cleanTitle = (selectedModule.shortTitle || selectedModule.title)
     .replace(/^Day\s+\d+\s*[-—:]\s*/i, '');
 
-  // Extract up to 4 core items from concepts/tasks
-  const allTasks = selectedModule.concepts.flatMap(c =>
-    c.tasks.map(t => ({
-      ...t,
-      conceptId: c.id
-    }))
+  // Extract concept items for the day card: only concept names, no tasks
+  const cardConcepts = selectedModule.concepts;
+  const firstIncompleteConceptIndex = cardConcepts.findIndex(
+    c => !isConceptCompleted(progress, c)
   );
 
-  // Determine which task is the first uncompleted one
-  const firstUncompletedIndex = allTasks.findIndex(t => !progress.completedTaskIds.includes(t.id));
+  const cardItems: CardItem[] = cardConcepts.map((c, idx) => {
+    const isCompleted = isConceptCompleted(progress, c);
+    const isCurrent = idx === (firstIncompleteConceptIndex >= 0 ? firstIncompleteConceptIndex : 0);
+    const nextTask = c.tasks.find(t => !progress.completedTaskIds.includes(t.id)) || c.tasks[0];
 
-  // If module has tasks, map first 4 tasks. If fewer, pad from completionLearnings or concepts
-  const displayTasks = allTasks.slice(0, 4);
-  const cardItems: CardItem[] = displayTasks.map((t, idx) => ({
-    id: t.id,
-    number: idx + 1,
-    text: t.description || t.title,
-    conceptId: t.conceptId,
-    taskId: t.id,
-    isCompleted: progress.completedTaskIds.includes(t.id),
-    isCurrent: idx === (firstUncompletedIndex >= 0 ? firstUncompletedIndex : -1)
-  }));
-
-  // If fewer than 4 tasks, fill with completion learnings
-  if (cardItems.length < 4 && selectedModule.completionLearnings) {
-    const needed = 4 - cardItems.length;
-    for (let i = 0; i < needed && i < selectedModule.completionLearnings.length; i++) {
-      cardItems.push({
-        id: `learning-${i}`,
-        number: cardItems.length + 1,
-        text: selectedModule.completionLearnings[i],
-        conceptId: selectedModule.concepts[0]?.id || '',
-        taskId: selectedModule.concepts[0]?.tasks[0]?.id || '',
-        isCompleted: dayProgress.isCompleted,
-        isCurrent: false
-      });
-    }
-  }
+    return {
+      id: c.id,
+      number: idx + 1,
+      text: c.title,
+      conceptId: c.id,
+      taskId: nextTask?.id || '',
+      isCompleted,
+      isCurrent
+    };
+  });
 
   // Calculate challenge completion
   const challengeTasks = selectedModule.challenge?.tasks || [];
@@ -305,7 +289,10 @@ export const RoadmapDayBox: React.FC<RoadmapDayBoxProps> = ({
 
               {/* Text Description */}
               <div className="flex-1 min-w-0">
-                <p className="font-sans text-xs sm:text-[13px] text-slate-200 group-hover:text-white leading-relaxed transition-colors">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-sky-400/80 group-hover:text-sky-300 mb-0.5 transition-colors">
+                  Concept {item.number}
+                </div>
+                <p className="font-sans font-medium text-xs sm:text-[13px] text-slate-200 group-hover:text-white leading-snug transition-colors">
                   {item.text}
                 </p>
               </div>

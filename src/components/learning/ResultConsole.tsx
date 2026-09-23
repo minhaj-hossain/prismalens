@@ -172,7 +172,7 @@ export const ResultConsole: React.FC<ResultConsoleProps> = ({
           ) : (
             <div className="h-full flex flex-col items-center justify-center p-6 text-center text-slate-500 font-mono text-xs">
               <Terminal className="w-8 h-8 text-slate-600 mb-2 opacity-60" />
-              <p>Ready. Click "Run Query" or press ⌘+Enter to execute.</p>
+              <p>Ready. Click "Run & Check" or press Ctrl + Enter to execute.</p>
             </div>
           )
         ) : activeTab === 'sql' ? (

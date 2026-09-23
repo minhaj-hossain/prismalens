@@ -26,8 +26,8 @@ export const MILESTONE_3_MODULES: ModuleData[] = [
       {
         id: 'day-09-concept-1',
         order: 1,
-        title: 'Inserting Data (create(), createMany())',
-        shortDescription: 'Persist records safely into the database with single and batch inserts.',
+        title: 'Inserting Records: Single Writes vs Batch Imports',
+        shortDescription: 'Persist records safely with create() and execute high-throughput bulk inserts with createMany().',
         theory: {
           summary: 'prisma.model.create({ data: { ... } }) creates a single record and returns the newly inserted object with auto-generated IDs and timestamps. createMany({ data: [...], skipDuplicates: true }) inserts multiple rows in a single batch INSERT statement.',
           targetHero: {
@@ -128,8 +128,8 @@ export const MILESTONE_3_MODULES: ModuleData[] = [
       {
         id: 'day-09-concept-2',
         order: 2,
-        title: 'Validating Input Payloads with Zod',
-        shortDescription: 'Never trust user input. Validate runtime payloads with Zod before writing to DB.',
+        title: 'Runtime Payload Validation with Zod',
+        shortDescription: 'Validate incoming user input before database calls to protect schema invariants and catch malicious payloads.',
         theory: {
           summary: 'ORMs guarantee database schema types, but they do NOT validate runtime user input (e.g. valid emails, password lengths, or positive quantities). Zod validates payloads at the HTTP layer, ensuring only clean data reaches Prisma.',
           targetHero: {
@@ -298,8 +298,8 @@ export const CreateProductSchema = z.object({
       {
         id: 'day-10-concept-1',
         order: 1,
-        title: 'Updating Single Records & Atomic Numeric Operations',
-        shortDescription: 'Prevent lost updates and race conditions using atomic database increments.',
+        title: 'Atomic Record Updates: Preventing Race Conditions',
+        shortDescription: 'Safely update record states and perform atomic increments to eliminate concurrency bugs.',
         theory: {
           summary: 'In concurrent environments (e.g. 50 users buying an item simultaneously), reading stock, calculating stock - 1 in JavaScript, and writing it back causes "lost updates". Prisma atomic operators (increment, decrement, multiply, divide) execute directly in SQL (SET stock = stock - 1), guaranteeing thread safety.',
           targetHero: {
@@ -409,8 +409,8 @@ const post = await prisma.post.update({
       {
         id: 'day-10-concept-2',
         order: 2,
-        title: 'Idempotent Workflows with upsert()',
-        shortDescription: 'Update if exists, insert if missing in one atomic query.',
+        title: 'Idempotent Mutations: The upsert() Pattern',
+        shortDescription: 'Atomically create missing records or update existing entities without race conditions or duplicate keys.',
         theory: {
           summary: 'upsert checks for the existence of a row by a unique constraint. If the row exists, it applies update: { ... }; if not, it executes create: { ... }.',
           targetHero: {
@@ -577,8 +577,8 @@ const post = await prisma.post.update({
       {
         id: 'day-11-concept-1',
         order: 1,
-        title: 'Referential Actions (onDelete: Cascade, SetNull, Restrict)',
-        shortDescription: 'Control what happens to child records when a parent entity is deleted.',
+        title: 'Referential Integrity: Cascade Deletes & Foreign Key Rules',
+        shortDescription: 'Define explicit child record behaviors on deletion to safeguard database consistency.',
         theory: {
           summary: 'When a record is deleted, foreign keys dictate child behavior: Cascade deletes all child rows automatically. SetNull sets the child foreign key to null (requires optional foreign key). Restrict blocks parent deletion if child records exist.',
           targetHero: {
@@ -685,8 +685,8 @@ model Comment {
       {
         id: 'day-11-concept-2',
         order: 2,
-        title: 'The Soft Deletion Pattern',
-        shortDescription: 'Protect audit trails and GDPR compliance by setting deletedAt instead of physical DELETE.',
+        title: 'Audit-Safe Soft Deletions: The deletedAt Pattern',
+        shortDescription: 'Preserve relational history and compliance audit trails by transitioning from physical deletes to soft timestamps.',
         theory: {
           summary: 'Hard deletes permanently remove rows from the database, destroying financial, legal, and activity history. The soft-delete pattern adds deletedAt DateTime? to the schema. "Deleting" simply updates deletedAt to now(), and queries filter by where: { deletedAt: null }.',
           targetHero: {
@@ -841,8 +841,8 @@ await prisma.user.update({
       {
         id: 'day-12-concept-1',
         order: 1,
-        title: 'Nested Writes (create, connect, connectOrCreate)',
-        shortDescription: 'Write parent and related child records simultaneously without manual foreign key plumbing.',
+        title: 'Relational Nested Writes: Atomic Parent & Child Mutations',
+        shortDescription: 'Create or associate related models in a single fluent operation without manual foreign key assignments.',
         theory: {
           summary: 'Prisma handles relational insertion in a single fluent operation. "create" makes a new child inline; "connect" links an existing record by unique key; "connectOrCreate" connects if found or creates if absent.',
           targetHero: {
@@ -955,8 +955,8 @@ await prisma.user.update({
       {
         id: 'day-12-concept-2',
         order: 2,
-        title: 'ACID Transactions (Sequential vs Interactive)',
-        shortDescription: 'Execute multi-step operations where all succeed or all roll back.',
+        title: 'ACID Transactions: Batch vs Interactive Workflows',
+        shortDescription: 'Ensure data integrity across multiple queries with all-or-nothing transactional guarantees.',
         theory: {
           summary: 'Sequential transactions (prisma.$transaction([op1, op2])) take an array of query promises and execute them in one transaction. Interactive transactions (prisma.$transaction(async (tx) => { ... })) allow subsequent queries to read values returned by earlier operations while the transaction is held open.',
           targetHero: {
