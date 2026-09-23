@@ -2,47 +2,49 @@
   "id": "day-04",
   "slug": "relations-modeling",
   "day": 4,
-  "title": "Relations (1-to-1, 1-to-Many, Many-to-Many)",
+  "title": "Day 4 — Relational Schema Modeling (1:1, 1:N, M:N)",
   "shortTitle": "Relations Modeling",
   "milestoneId": "milestone-1",
-  "description": "Model real-world relationships in Prisma schemas, understand foreign keys, @relation attributes, and implicit vs explicit join tables.",
+  "description": "Master relational modeling in Prisma: understand how foreign keys connect tables, why scalar fields differ from relation fields, enforce 1:1 uniqueness, and model explicit many-to-many join tables.",
   "estimatedMinutes": 55,
   "completionLearnings": [
-    "Mastered 1-to-Many relations: foreign key scalar field (authorId Int) vs relation field (author User)",
-    "Understood 1-to-1 relations and why @unique on foreign key turns 1:N into 1:1",
-    "Distinguished implicit M:N vs explicit M:N join tables with custom relationship attributes"
+    "Differentiate physical foreign key columns (authorId Int) from virtual TypeScript relation fields (author User)",
+    "Understand why 1-to-1 relations require @unique on the foreign key to avoid accidentally creating a 1-to-Many relation",
+    "Model optional relations using nullable foreign keys (Int?)",
+    "Compare Prisma implicit many-to-many relations with explicit join models"
   ],
   "concepts": [
     {
       "id": "day-04-concept-1",
       "order": 1,
-      "title": "One-to-Many (1:N) Relations",
-      "shortDescription": "The fundamental relational pattern: parent holds array, child holds foreign key.",
+      "title": "One-to-Many (1:N): Scalar Columns vs Virtual Relation Fields",
+      "shortDescription": "How foreign keys link tables, and why Prisma cleanly separates the SQL column from the TypeScript navigation property.",
       "theory": {
-        "summary": "In a 1:N relationship (e.g. User has many Posts), the child table (Post) holds the foreign key scalar field (authorId Int) and the virtual relation field (author User @relation(fields: [authorId], references: [id])).",
+        "summary": "In relational databases, relationships are formed using Foreign Keys. In a One-to-Many (1:N) relationship (e.g. an Author has many Books), the foreign key column always lives on the \"Many\" table (Book).\n\nPrisma introduces a clean architectural distinction that avoids confusion:\n1. The Scalar Field (authorId Int):\n   This is the actual, physical integer column stored in your PostgreSQL table.\n2. The Relation Field (author Author @relation(...)):\n   This field does NOT exist as a column in PostgreSQL! It is a virtual navigation property used exclusively in TypeScript to navigate relations and perform typed joins with include or select.\n\nThe @relation attribute binds the virtual field to the physical foreign key:\n@relation(fields: [authorId], references: [id])\n- fields: [authorId] points to the scalar column on this model.\n- references: [id] points to the target primary key on the referenced model.",
         "targetHero": {
           "language": "prisma",
-          "badge": "1-to-Many Anatomy",
-          "explanation": "Post holds authorId foreign key pointing to id on User. User holds the posts Post[] relation array.",
-          "code": "model User {\n  id    Int    @id @default(autoincrement())\n  posts Post[]\n}\n\nmodel Post {\n  id       Int  @id @default(autoincrement())\n  title    String\n  authorId Int\n  author   User @relation(fields: [authorId], references: [id])\n}"
+          "badge": "1-to-Many Architecture",
+          "explanation": "Book holds the physical authorId column. Author holds the virtual books relation array.",
+          "code": "model Author {\n  id    Int    @id @default(autoincrement())\n  name  String\n  books Book[] // Virtual relation array (not a database column)\n}\n\nmodel Book {\n  id       Int    @id @default(autoincrement())\n  title    String\n  authorId Int    // Physical SQL foreign key column\n  author   Author @relation(fields: [authorId], references: [id])\n}"
         },
         "explanation": [
-          "Scalar Field vs Relation Field: authorId is the actual column in SQL. author is a TypeScript-level relation field used for joins and typed includes.",
-          "Optional 1:N: Setting authorId Int? allows child records to exist without being bound to a parent."
+          "The model on the \"Many\" side holds the foreign key scalar column (authorId Int).",
+          "The relation field (author Author) is a virtual TypeScript property that enables eager loading with include.",
+          "Optional 1:N: Setting authorId Int? allows child records to exist without being bound to a parent record."
         ],
-        "keyTakeaway": "In Prisma 1:N relations, the model that holds the foreign key must define @relation(fields: [...], references: [...]).",
+        "keyTakeaway": "In Prisma 1:N relations, the model that holds the foreign key defines @relation(fields: [...], references: [...]).",
         "mcqs": [
           {
             "id": "mcq-4-1",
-            "question": "Which model holds the foreign key column in a 1-to-Many relationship between Author and Book?",
+            "question": "In a 1-to-Many relationship between Author and Book, which model holds the actual database foreign key column?",
             "options": [
               "Author holds bookId",
               "Book holds authorId",
               "Both models hold foreign keys",
-              "Prisma generates an external join table automatically"
+              "Prisma generates a separate join table automatically"
             ],
             "correctIndex": 1,
-            "explanation": "The \"Many\" side (Book) holds the foreign key pointing back to the \"One\" side (Author)."
+            "explanation": "The \"Many\" side (Book) holds the foreign key scalar column pointing back to the primary key of Author."
           }
         ]
       },
@@ -50,7 +52,7 @@
         {
           "id": "task-4-1",
           "title": "Task 1 (Guided): Connect Author and Book (1:N)",
-          "description": "Add foreign key authorId and relation field author to model Book.",
+          "description": "Add foreign key authorId and relation field author to model Book referencing Author.id.",
           "type": "guided",
           "targetModel": "Book",
           "activeTab": "schema",
@@ -73,10 +75,9 @@
           ],
           "validation": {
             "targetModel": "Book",
-            "requiredFieldsInSelect": [
-              "id",
-              "title",
-              "authorId"
+            "codeContains": [
+              "authorId Int",
+              "author Author @relation"
             ]
           },
           "successMessage": "Great job! 1:N relationship between Author and Book established."
@@ -84,7 +85,7 @@
         {
           "id": "task-4-2",
           "title": "Task 2 (Independent): Optional 1:N Relation (Company & Employee)",
-          "description": "Model 1-to-Many relation where companyId is optional (Int?) allowing unassigned employees.",
+          "description": "Model a 1-to-Many relation where companyId is optional (Int?) allowing unassigned employees.",
           "type": "independent",
           "targetModel": "Employee",
           "activeTab": "schema",
@@ -98,15 +99,14 @@
           "hints": [
             {
               "level": 1,
-              "text": "Both companyId and company must have question marks (Int?, Company?)."
+              "text": "Both companyId and company must be optional (Int?, Company?)."
             }
           ],
           "validation": {
             "targetModel": "Employee",
-            "requiredFieldsInSelect": [
-              "id",
-              "name",
-              "companyId"
+            "codeContains": [
+              "companyId Int?",
+              "company Company? @relation"
             ]
           },
           "successMessage": "Well done! Optional foreign keys correctly configured."
@@ -116,33 +116,34 @@
     {
       "id": "day-04-concept-2",
       "order": 2,
-      "title": "One-to-One (1:1) Relations",
-      "shortDescription": "The foreign key in a 1:1 relation MUST be unique to guarantee exclusivity.",
+      "title": "One-to-One (1:1): The @unique Mandate",
+      "shortDescription": "Why omitting @unique on a foreign key accidentally creates a 1:Many relation, and how 1:1 relations enforce strict pairing.",
       "theory": {
-        "summary": "A 1:1 relationship links one entity to at most one other entity (e.g. User and Profile). Syntactically, it is identical to 1:N, with ONE vital requirement: the foreign key MUST have @unique.",
+        "summary": "A One-to-One (1:1) relationship links exactly one record to at most one other record (such as a User and their private Profile, or a Driver and their License).\n\nSyntactically, a 1:1 relation looks almost identical to a 1:N relation. There is only one critical difference:\nThe foreign key scalar field MUST have the @unique constraint!\n\nWhy is @unique mandatory?\nIf userId Int does NOT have @unique, nothing stops multiple Profile records from pointing to the same User #1. That would be a One-to-Many relationship. By placing @unique on userId:\nuserId Int @unique\n\nPostgreSQL enforces that no two Profile rows can ever have the same userId, guaranteeing a strict 1:1 pairing. If you omit @unique, Prisma schema validation will halt with a compile error.",
         "targetHero": {
           "language": "prisma",
           "badge": "1-to-1 Architecture",
-          "explanation": "@unique on userId transforms what would be a 1:N relation into a strict 1:1 relation.",
-          "code": "model User {\n  id      Int      @id @default(autoincrement())\n  profile Profile?\n}\n\nmodel Profile {\n  id     Int  @id @default(autoincrement())\n  bio    String\n  userId Int  @unique // @unique turns 1:N into 1:1!\n  user   User @relation(fields: [userId], references: [id])\n}"
+          "explanation": "@unique on userId guarantees that each User has at most one Profile.",
+          "code": "model User {\n  id      Int      @id @default(autoincrement())\n  profile Profile? // Optional 1:1 reference\n}\n\nmodel Profile {\n  id     Int    @id @default(autoincrement())\n  bio    String\n  userId Int    @unique // MANDATORY: @unique turns 1:N into 1:1!\n  user   User   @relation(fields: [userId], references: [id])\n}"
         },
         "explanation": [
-          "Without @unique: Multiple Profile rows could have the same userId, making it 1:N.",
-          "With @unique: The database rejects duplicate userId entries, guaranteeing exactly 1:1."
+          "Without @unique on the foreign key, the database permits multiple child rows per parent (1:Many).",
+          "With @unique, the database guarantees that at most one child row can reference a given parent (1:1).",
+          "In Prisma, the parent model typically marks the relation as optional (Profile?) because a User might not have a profile yet."
         ],
         "keyTakeaway": "Always place @unique on the foreign key field in a 1:1 relationship.",
         "mcqs": [
           {
             "id": "mcq-4-2",
-            "question": "What happens if you omit @unique on the foreign key of a 1:1 relation?",
+            "question": "What happens if you omit @unique on the foreign key field of a 1:1 relation in Prisma?",
             "options": [
-              "Prisma silently ignores it",
-              "Prisma schema validation throws an error because the relation is ambiguous",
-              "The database deletes the parent record",
-              "TypeScript automatically forces uniqueness"
+              "Prisma silently ignores it and creates a 1:1 relation anyway",
+              "Prisma schema validation flags an error because without @unique the relation is a 1-to-Many",
+              "The database deletes the parent record on startup",
+              "TypeScript automatically forces uniqueness at runtime"
             ],
             "correctIndex": 1,
-            "explanation": "Prisma compiler throws: \"A one-to-one relation must have a unique constraint on the foreign key\"."
+            "explanation": "Prisma validation requires @unique on the foreign key of a 1:1 relation because without a unique constraint, PostgreSQL would permit multiple child records pointing to the same parent."
           }
         ]
       },
@@ -173,175 +174,78 @@
           ],
           "validation": {
             "targetModel": "AccountSettings",
-            "requiredFieldsInSelect": [
-              "id",
-              "darkMode",
-              "accountId"
+            "codeContains": [
+              "accountId Int @unique",
+              "account Account @relation"
             ]
           },
-          "successMessage": "Awesome! 1:1 relationship successfully modeled."
+          "successMessage": "Great job! 1:1 relationship successfully modeled."
         },
         {
           "id": "task-4-4",
           "title": "Task 2 (Independent): Fix 1:1 Unique Constraint Bug",
-          "description": "Fix a schema error where omitting @unique caused Prisma compiler failure.",
+          "description": "Fix a schema issue where omitting @unique caused relation validation failure.",
           "type": "independent",
           "targetModel": "License",
           "activeTab": "schema",
           "instructions": [
             "Add @unique to driverId in model License"
           ],
-          "initialCode": "model Driver {\n  id      Int      @id @default(autoincrement())\n  license License?\n}\n\nmodel License {\n  id       Int    @id @default(autoincrement())\n  number   String @unique\n  driverId Int    // BUG: Missing @unique!\n  driver   Driver @relation(fields: [driverId], references: [id])\n}",
+          "initialCode": "model Driver {\n  id      Int      @id @default(autoincrement())\n  license License?\n}\n\nmodel License {\n  id       Int    @id @default(autoincrement())\n  number   String @unique\n  driverId Int\n  driver   Driver @relation(fields: [driverId], references: [id])\n}",
           "solutionCode": "model Driver {\n  id      Int      @id @default(autoincrement())\n  license License?\n}\n\nmodel License {\n  id       Int    @id @default(autoincrement())\n  number   String @unique\n  driverId Int    @unique\n  driver   Driver @relation(fields: [driverId], references: [id])\n}",
-          "solutionExplanation": "Adding @unique resolves the relation ambiguity and enables 1:1 navigation.",
+          "solutionExplanation": "driverId @unique enforces that each driver has at most one license.",
           "hints": [
             {
               "level": 1,
-              "text": "Append @unique to \"driverId Int\"."
+              "text": "Change \"driverId Int\" to \"driverId Int @unique\"."
             }
           ],
           "validation": {
             "targetModel": "License",
-            "requiredFieldsInSelect": [
-              "id",
-              "number",
-              "driverId"
+            "codeContains": [
+              "driverId Int @unique"
             ]
           },
-          "successMessage": "Great fix! Driver to License is now a valid 1:1 relation."
-        }
-      ]
-    },
-    {
-      "id": "day-04-concept-3",
-      "order": 3,
-      "title": "Many-to-Many (M:N) Relations (Implicit vs Explicit)",
-      "shortDescription": "Choose between Prisma-managed implicit join tables and explicit models with extra metadata.",
-      "theory": {
-        "summary": "In implicit M:N relations (Post[] and Tag[]), Prisma manages a hidden join table automatically. When the relationship needs its own data (e.g. assignedAt, role, grade), use an explicit join model with @@id([a, b]).",
-        "targetHero": {
-          "language": "prisma",
-          "badge": "Explicit Join Table Pattern",
-          "explanation": "PostTag stores extra metadata (assignedAt) between Post and Tag.",
-          "code": "// Explicit M:N Join Model with extra attribute\nmodel PostTag {\n  postId     Int\n  tagId      Int\n  assignedAt DateTime @default(now())\n  post       Post     @relation(fields: [postId], references: [id])\n  tag        Tag      @relation(fields: [tagId], references: [id])\n\n  @@id([postId, tagId])\n}"
-        },
-        "explanation": [
-          "Implicit M:N: Easy and clean when no relation attributes are needed.",
-          "Explicit M:N: Essential for audit trails, permissions, timestamps, or quantities in shopping carts."
-        ],
-        "keyTakeaway": "If the relationship has attributes of its own, use an explicit join model.",
-        "mcqs": [
-          {
-            "id": "mcq-4-3",
-            "question": "When MUST you use an explicit Many-to-Many relation instead of an implicit one?",
-            "options": [
-              "Whenever using PostgreSQL",
-              "When the relationship itself needs to store additional data (e.g. assignedDate, quantity)",
-              "Whenever there are more than 100 rows in the database",
-              "When models have more than 5 fields"
-            ],
-            "correctIndex": 1,
-            "explanation": "Implicit join tables cannot store extra columns. You must create an explicit join model to hold relation fields."
-          }
-        ]
-      },
-      "tasks": [
-        {
-          "id": "task-4-5",
-          "title": "Task 1 (Guided): Define Implicit M:N Relation (Post & Category)",
-          "description": "Define an implicit M:N relation between Post and Category by placing array relation fields on both models.",
-          "type": "guided",
-          "targetModel": "Post",
-          "activeTab": "schema",
-          "instructions": [
-            "In model Post, add categories Category[]",
-            "In model Category, add posts Post[]"
-          ],
-          "initialCode": "model Post {\n  id Int @id @default(autoincrement())\n  // Add categories relation\n}\n\nmodel Category {\n  id Int @id @default(autoincrement())\n  // Add posts relation\n}",
-          "solutionCode": "model Post {\n  id         Int        @id @default(autoincrement())\n  categories Category[]\n}\n\nmodel Category {\n  id    Int    @id @default(autoincrement())\n  posts Post[]\n}",
-          "solutionExplanation": "Prisma handles the underlying _CategoryToPost join table transparently.",
-          "hints": [
-            {
-              "level": 1,
-              "text": "Add \"categories Category[]\" to Post and \"posts Post[]\" to Category."
-            }
-          ],
-          "validation": {
-            "targetModel": "Post"
-          },
-          "successMessage": "Implicit M:N relation defined!"
-        },
-        {
-          "id": "task-4-6",
-          "title": "Task 2 (Independent): Explicit M:N Join Model with Grade",
-          "description": "Define an explicit M:N relation between Student and ClassRoom via join model ClassEnrollment with grade Decimal?.",
-          "type": "independent",
-          "targetModel": "ClassEnrollment",
-          "activeTab": "schema",
-          "instructions": [
-            "Define model ClassEnrollment with studentId Int, classRoomId Int, grade Decimal?",
-            "Add relations to Student and ClassRoom",
-            "Add composite primary key @@id([studentId, classRoomId])"
-          ],
-          "initialCode": "model Student {\n  id          Int               @id @default(autoincrement())\n  name        String\n  enrollments ClassEnrollment[]\n}\n\nmodel ClassRoom {\n  id          Int               @id @default(autoincrement())\n  roomNumber  String\n  enrollments ClassEnrollment[]\n}\n\n// Define model ClassEnrollment with studentId, classRoomId, grade, and @@id:\n",
-          "solutionCode": "model Student {\n  id          Int               @id @default(autoincrement())\n  name        String\n  enrollments ClassEnrollment[]\n}\n\nmodel ClassRoom {\n  id          Int               @id @default(autoincrement())\n  roomNumber  String\n  enrollments ClassEnrollment[]\n}\n\nmodel ClassEnrollment {\n  studentId   Int\n  classRoomId Int\n  grade       Decimal?\n  student     Student   @relation(fields: [studentId], references: [id])\n  classRoom   ClassRoom @relation(fields: [classRoomId], references: [id])\n\n  @@id([studentId, classRoomId])\n}",
-          "solutionExplanation": "Explicit join model holding studentId, classRoomId, and custom grade attribute.",
-          "hints": [
-            {
-              "level": 1,
-              "text": "Include student Student @relation and classRoom ClassRoom @relation."
-            },
-            {
-              "level": 2,
-              "text": "Add @@id([studentId, classRoomId]) at the end."
-            }
-          ],
-          "validation": {
-            "targetModel": "ClassEnrollment",
-            "requiredFieldsInSelect": [
-              "studentId",
-              "classRoomId"
-            ]
-          },
-          "successMessage": "Masterful! Explicit M:N join model accurately crafted."
+          "successMessage": "Fixed! Adding @unique satisfies the 1:1 relation requirement."
         }
       ]
     }
   ],
   "challenge": {
     "id": "day-04-challenge",
-    "title": "Day 4 Final Challenge: Social Network Relational Core",
-    "scenario": "Build the complete relational schema for a social network: User to Profile (1:1), User to Post (1:N), and Post to Comment (1:N).",
+    "title": "Day 4 Challenge: Model a Hospital Doctor-Patient Relational Graph",
+    "scenario": "A healthcare SaaS platform needs relational models for Doctor and Appointment. A Doctor has many Appointments, and an Appointment belongs to exactly one Doctor. Model this 1-to-Many relationship with proper foreign keys.",
     "tasks": [
       {
         "id": "challenge-4-1",
-        "title": "Step 1: Wire Up Post and Comment Relation",
-        "description": "Add postId Int and post relation to Comment referencing Post.id.",
+        "title": "Model Doctor-Appointment 1:N Relationship",
+        "description": "In model Appointment, add doctorId Int and doctor relation referencing Doctor.id. In model Doctor, add appointments Appointment[].",
         "type": "challenge",
-        "targetModel": "Comment",
+        "targetModel": "Appointment",
         "activeTab": "schema",
         "instructions": [
-          "In model Comment, add postId Int",
-          "Add post Post @relation(fields: [postId], references: [id])"
+          "In model Doctor, add appointments Appointment[]",
+          "In model Appointment, add doctorId Int",
+          "In model Appointment, add doctor Doctor @relation(fields: [doctorId], references: [id])"
         ],
-        "initialCode": "model Post {\n  id       Int       @id @default(autoincrement())\n  comments Comment[]\n}\n\nmodel Comment {\n  id      Int    @id @default(autoincrement())\n  content String\n  // Add relation to Post\n}",
-        "solutionCode": "model Post {\n  id       Int       @id @default(autoincrement())\n  comments Comment[]\n}\n\nmodel Comment {\n  id      Int    @id @default(autoincrement())\n  content String\n  postId  Int\n  post    Post   @relation(fields: [postId], references: [id])\n}",
-        "solutionExplanation": "Creates 1:N relation between Post and Comment.",
+        "initialCode": "model Doctor {\n  id           Int    @id @default(autoincrement())\n  name         String\n  specialty    String\n  // Add appointments relation\n}\n\nmodel Appointment {\n  id          Int      @id @default(autoincrement())\n  scheduledAt DateTime\n  // Add doctorId and doctor relation\n}",
+        "solutionCode": "model Doctor {\n  id           Int           @id @default(autoincrement())\n  name         String\n  specialty    String\n  appointments Appointment[]\n}\n\nmodel Appointment {\n  id          Int      @id @default(autoincrement())\n  scheduledAt DateTime\n  doctorId    Int\n  doctor      Doctor   @relation(fields: [doctorId], references: [id])\n}",
+        "solutionExplanation": "Establishes a type-safe 1:N relation with doctorId foreign key.",
         "hints": [
           {
             "level": 1,
-            "text": "Add postId Int and post Post @relation."
+            "text": "In Doctor: appointments Appointment[]. In Appointment: doctorId Int and doctor Doctor @relation(...)."
           }
         ],
         "validation": {
-          "targetModel": "Comment",
-          "requiredFieldsInSelect": [
-            "id",
-            "content",
-            "postId"
+          "targetModel": "Appointment",
+          "codeContains": [
+            "appointments Appointment[]",
+            "doctorId Int",
+            "doctor Doctor @relation"
           ]
         },
-        "successMessage": "Day 4 challenge complete! Relational core wired up."
+        "successMessage": "Outstanding! Doctor-Appointment relational model is production-ready."
       }
     ]
   }

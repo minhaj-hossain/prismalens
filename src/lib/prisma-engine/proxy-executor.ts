@@ -32,6 +32,13 @@ export interface ExecutionLogItem {
   timestamp: string;
 }
 
+export interface TableDiffItem {
+  table: string;
+  inserted: any[];
+  updated: { before: any; after: any }[];
+  deleted: any[];
+}
+
 export interface ExecutionResult {
   success: boolean;
   data: any;
@@ -45,6 +52,7 @@ export interface ExecutionResult {
   inferredType: string;
   queryLogs: ExecutionLogItem[];
   durationMs: number;
+  tableDiff?: TableDiffItem[];
 }
 
 export class InBrowserPrismaEngine {
@@ -143,6 +151,22 @@ export class InBrowserPrismaEngine {
     return this.tables[key];
   }
 
+  public getTables(): Record<string, any[]> {
+    return this.tables;
+  }
+
+  public getTableSnapshot(): string {
+    return JSON.stringify(this.tables);
+  }
+
+  public restoreTableSnapshot(snapshot: string): void {
+    try {
+      this.tables = JSON.parse(snapshot);
+    } catch (e) {
+      console.error('Failed to restore table snapshot:', e);
+    }
+  }
+
   public createClientProxy(txWrapper?: any): any {
     const engine = this;
 
@@ -150,17 +174,26 @@ export class InBrowserPrismaEngine {
       get(target: any, prop: string) {
         if (prop === '$transaction') {
           return async (arg: any) => {
-            if (Array.isArray(arg)) {
-              const results = [];
-              for (const op of arg) {
-                results.push(await op);
+            // Snapshot current database state for atomic rollback on failure
+            const snapshot = engine.getTableSnapshot();
+            try {
+              if (Array.isArray(arg)) {
+                const results = [];
+                for (const op of arg) {
+                  results.push(await op);
+                }
+                return results;
+              } else if (typeof arg === 'function') {
+                const scopedClient = engine.createClientProxy();
+                const res = await arg(scopedClient);
+                return res;
               }
-              return results;
-            } else if (typeof arg === 'function') {
-              const scopedClient = engine.createClientProxy();
-              return await arg(scopedClient);
+              throw new Error('$transaction expects an array of promises or an interactive callback function');
+            } catch (txError) {
+              // Roll back table state atomically on failure
+              engine.restoreTableSnapshot(snapshot);
+              throw txError;
             }
-            throw new Error('$transaction expects an array of promises or an interactive callback function');
           };
         }
 
@@ -195,8 +228,7 @@ export class InBrowserPrismaEngine {
             return res;
           },
           findFirst: async (args: any = {}) => {
-            const list = await engine.executeFindMany(modelName, { ...args, take: 1 });
-            return list.length > 0 ? list[0] : null;
+            return engine.executeFindFirst(modelName, args);
           },
           create: async (args: any = {}) => {
             return engine.executeCreate(modelName, args);
@@ -272,6 +304,35 @@ export class InBrowserPrismaEngine {
 
     // Shape output with select or include
     return results.map(row => shapeRow(row, modelName, args, this));
+  }
+
+  private executeFindFirst(modelName: string, args: any = {}) {
+    const sql = generateSqlFromPrismaCall(modelName, 'findFirst', args);
+    this.executionLogs.push({
+      model: modelName,
+      action: 'findFirst',
+      args,
+      sql,
+      timestamp: new Date().toISOString()
+    });
+
+    const table = this.getTable(modelName);
+    let results = [...table];
+
+    if (args.where) {
+      results = results.filter(row => matchWhere(row, args.where));
+    }
+
+    if (args.orderBy) {
+      applyOrderBy(results, args.orderBy);
+    }
+
+    if (args.skip) {
+      results = results.slice(args.skip);
+    }
+
+    const first = results.length > 0 ? results[0] : null;
+    return first ? shapeRow(first, modelName, args, this) : null;
   }
 
   private executeFindUnique(modelName: string, args: any = {}) {
@@ -611,26 +672,124 @@ export function stripTypeScript(code: string): string {
     // Remove export keywords
     .replace(/export\s+(async\s+function|function|const|let|var|class)/g, '$1')
     // Remove type casting: as Type
-    .replace(/\s+as\s+[a-zA-Z0-9_<>[\]]+/g, '');
+    .replace(/\s+as\s+[a-zA-Z0-9_<>[\]]+/g, '')
+    // Strip catch clause type annotations: catch (error: any) => catch (error)
+    .replace(/catch\s*\(\s*([a-zA-Z0-9_$]+)\s*:\s*[a-zA-Z0-9_<>[\]|&"']+\s*\)/g, 'catch ($1)')
+    // Strip variable type annotations: const x: string = ... => const x = ...
+    .replace(/\b(const|let|var)\s+([a-zA-Z0-9_$]+)\s*:\s*[a-zA-Z0-9_<>[\]|&"']+\s*=/g, '$1 $2 =')
+    // Strip TS access modifiers
+    .replace(/\b(public|private|protected|readonly)\s+/g, '');
 
   // Strip function return types: ): Promise<...> { or ): Type {
   cleaned = cleaned.replace(/\):\s*(?:Promise<[^>]+>|[a-zA-Z0-9_<>[\]|& ]+)\s*\{/g, ') {');
   cleaned = cleaned.replace(/\):\s*(?:Promise<[^>]+>|[a-zA-Z0-9_<>[\]|& ]+)\s*=>/g, ') =>');
 
-  // Strip param types inside function declarations: function foo(a: string, b: number)
-  cleaned = cleaned.replace(/(function\s*[a-zA-Z0-9_]*\s*\()([^)]*)\)/g, (match, prefix, params) => {
-    const cleanedParams = params.split(',').map((p: string) => {
-      return p.replace(/:\s*[a-zA-Z0-9_<>[\]|&"']+/g, '').trim();
-    }).join(', ');
-    return prefix + cleanedParams + ')';
-  });
+  // Helper to split parameters while respecting nested brackets/generics
+  function splitParams(params: string): string[] {
+    const result: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (let i = 0; i < params.length; i++) {
+      const char = params[i];
+      if (char === '{' || char === '(' || char === '<' || char === '[') {
+        depth++;
+      } else if (char === '}' || char === ')' || char === '>' || char === ']') {
+        depth--;
+      }
+      if (char === ',' && depth === 0) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    if (current.trim()) {
+      result.push(current);
+    }
+    return result;
+  }
 
-  // Strip param types inside typed arrow functions: (a: string, b: number) =>
-  cleaned = cleaned.replace(/(\([^)]*\)\s*=>)/g, (match) => {
-    return match.replace(/:\s*[a-zA-Z0-9_<>[\]|&"']+/g, '');
+  function cleanParam(p: string): string {
+    p = p.trim();
+    if (!p) return '';
+    const eqIndex = p.indexOf('=');
+    const hasDefault = eqIndex !== -1;
+    const paramDef = hasDefault ? p.slice(0, eqIndex).trim() : p;
+    const defaultVal = hasDefault ? ' ' + p.slice(eqIndex).trim() : '';
+
+    if (paramDef.startsWith('{') && paramDef.includes('}')) {
+      const braceIdx = paramDef.lastIndexOf('}');
+      return paramDef.slice(0, braceIdx + 1).trim() + defaultVal;
+    }
+
+    const colonIdx = paramDef.indexOf(':');
+    if (colonIdx !== -1) {
+      let namePart = paramDef.slice(0, colonIdx).trim();
+      if (namePart.endsWith('?')) {
+        namePart = namePart.slice(0, -1).trim();
+      }
+      return namePart + defaultVal;
+    }
+
+    return paramDef + defaultVal;
+  }
+
+  // Strip param types inside function and method declarations: static async getFeed(cursor?: number, limit = 10) {
+  cleaned = cleaned.replace(
+    /((?:(?:export\s+)?(?:default\s+)?(?:static\s+)?(?:async\s+)?function\s*[a-zA-Z0-9_$]*|(?:static\s+)?(?:async\s+)?\b(?!(?:if|while|for|switch|catch)\b)[a-zA-Z0-9_$]+)\s*\()([^)]*)\)(\s*(?::\s*[^{=>]+)?\s*\{)/g,
+    (match, prefix, params, suffix) => {
+      const cleanedParams = splitParams(params).map(cleanParam).filter(Boolean).join(', ');
+      return prefix + cleanedParams + ')' + suffix;
+    }
+  );
+
+  // Strip param types inside typed arrow functions: (a?: string, b: number) =>
+  cleaned = cleaned.replace(/\(([^()]*)\)\s*=>/g, (match, inner) => {
+    const cleanedParams = splitParams(inner).map(cleanParam).filter(Boolean).join(', ');
+    return '(' + cleanedParams + ') =>';
   });
 
   return cleaned;
+}
+
+function computeTableDiff(before: Record<string, any[]>, after: Record<string, any[]>): TableDiffItem[] {
+  const diffs: TableDiffItem[] = [];
+  const allTables = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+
+  for (const table of allTables) {
+    const beforeRows = before[table] || [];
+    const afterRows = after[table] || [];
+
+    const beforeMap = new Map(beforeRows.map(r => [r.id ?? JSON.stringify(r), r]));
+    const afterMap = new Map(afterRows.map(r => [r.id ?? JSON.stringify(r), r]));
+
+    const inserted: any[] = [];
+    const updated: { before: any; after: any }[] = [];
+    const deleted: any[] = [];
+
+    for (const [key, afterRow] of afterMap.entries()) {
+      if (!beforeMap.has(key)) {
+        inserted.push(afterRow);
+      } else {
+        const beforeRow = beforeMap.get(key);
+        if (JSON.stringify(beforeRow) !== JSON.stringify(afterRow)) {
+          updated.push({ before: beforeRow, after: afterRow });
+        }
+      }
+    }
+
+    for (const [key, beforeRow] of beforeMap.entries()) {
+      if (!afterMap.has(key)) {
+        deleted.push(beforeRow);
+      }
+    }
+
+    if (inserted.length > 0 || updated.length > 0 || deleted.length > 0) {
+      diffs.push({ table, inserted, updated, deleted });
+    }
+  }
+
+  return diffs;
 }
 
 /**
@@ -655,6 +814,8 @@ export async function executeUserCode(
       durationMs: Number(duration.toFixed(2))
     };
   }
+
+  const beforeTables = JSON.parse(JSON.stringify(engine.getTables()));
 
   try {
     const prisma = engine.createClientProxy();
@@ -722,12 +883,16 @@ export async function executeUserCode(
       if (typeof seedCategories === 'function') return await seedCategories();
       if (typeof seedWelcomeDiscount === 'function') return await seedWelcomeDiscount();
       if (typeof dbHealthCheck === 'function') return await dbHealthCheck();
-      if (typeof handleRequest === 'function') return await handleRequest({ url: '/users' });
+      if (typeof handleRequest === 'function') {
+        const mockRes = { json: (d) => d, status: (c) => ({ json: (d) => d }) };
+        return await handleRequest({ url: '/users' }, mockRes);
+      }
       if (typeof PostService !== 'undefined' && typeof PostService.getFeed === 'function') return await PostService.getFeed();
       if (typeof PostService !== 'undefined' && typeof PostService.createPost === 'function') return await PostService.createPost(1, 'Hello Prisma', ['tech']);
       if (typeof getGenerateCommand === 'function') return getGenerateCommand();
       if (typeof getProductionMigrationCommand === 'function') return getProductionMigrationCommand();
       if (typeof formatPooledDbUrl === 'function') return formatPooledDbUrl('postgres://user:pass@ep-cool.aws.neon.tech/neondb');
+      if (typeof getPrismaSingleton === 'function') return getPrismaSingleton({}, function MockClient() {}, 'test');
       if (typeof createLoggedClient === 'function') return createLoggedClient();
       if (typeof setupGracefulShutdown === 'function') return setupGracefulShutdown(prisma);
       if (typeof deletePostHandler === 'function') {
@@ -750,16 +915,27 @@ export async function executeUserCode(
       return { executed: true, logs: 'Code evaluated successfully' };
     `);
 
-    const result = await runner(prisma, z, Prisma);
+    // Race execution against a 3500ms timeout
+    const timeoutMs = 3500;
+    const timeoutPromise = new Promise((_, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Execution timed out after ${timeoutMs}ms (infinite loop or stalled async operation).`));
+      }, timeoutMs);
+      if (typeof timer.unref === 'function') timer.unref();
+    });
+
+    const result = await Promise.race([runner(prisma, z, Prisma), timeoutPromise]);
     const duration = performance.now() - startTime;
     const inferred = inferTypeScriptType(result);
+    const tableDiff = computeTableDiff(beforeTables, engine.getTables());
 
     return {
       success: true,
       data: result,
       inferredType: inferred,
       queryLogs: engine.executionLogs,
-      durationMs: Number(duration.toFixed(2))
+      durationMs: Number(duration.toFixed(2)),
+      tableDiff
     };
   } catch (err: any) {
     const duration = performance.now() - startTime;

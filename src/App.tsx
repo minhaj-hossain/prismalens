@@ -15,6 +15,8 @@ import {
   markTaskComplete,
   markDayComplete,
   resetProgress,
+  recordDayLocation,
+  resolveDayResumeTarget,
   isTaskCompleted as checkTaskCompleted,
   isDayCompleted as checkDayCompleted
 } from './lib/progress/storage';
@@ -67,33 +69,126 @@ export default function App() {
     saveProgress(progress);
   }, [progress]);
 
-  // Navigation handlers - default goes directly to Concept Theory
-  const handleSelectDayFromRoadmap = (
-    dayId: string,
-    initialStep: DaySubStep = 'theory',
+  // Synchronize state with URL hash (Back/Forward buttons & deep links)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '');
+      if (!hash || hash === 'roadmap') {
+        setActiveView('roadmap');
+        return;
+      }
+      if (hash === 'erd') {
+        setActiveView('erd');
+        return;
+      }
+      if (hash === 'playground') {
+        setActiveView('playground');
+        return;
+      }
+
+      // Format: day/:dayId(/overview | /theory(/:conceptId) | /practice(/:taskId) | /challenge)
+      const parts = hash.split('/');
+      if (parts[0] === 'day' && parts[1]) {
+        const dayId = parts[1];
+        setProgress((prev) => ({ ...prev, currentDayId: dayId }));
+        setActiveView('learn');
+
+        const step = parts[2] as DaySubStep | undefined;
+        if (step === 'overview') {
+          setDaySubStep('overview');
+        } else if (step === 'theory') {
+          setDaySubStep('theory');
+          if (parts[3]) setActiveConceptId(parts[3]);
+        } else if (step === 'practice') {
+          setDaySubStep('practice');
+          if (parts[3]) setActiveTaskId(parts[3]);
+        } else if (step === 'challenge') {
+          setDaySubStep('challenge');
+        } else {
+          setDaySubStep('theory');
+        }
+      }
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Sync state changes back to URL hash
+  const syncHash = (
+    view: MainView,
+    dayId?: string,
+    subStep?: DaySubStep,
     conceptId?: string,
     taskId?: string
   ) => {
-    setProgress((prev) => ({
-      ...prev,
-      currentDayId: dayId
-    }));
-    setActiveConceptId(conceptId);
-    setActiveTaskId(taskId);
-    setDaySubStep(initialStep);
+    let target = '#/roadmap';
+    if (view === 'roadmap') target = '#/roadmap';
+    else if (view === 'erd') target = '#/erd';
+    else if (view === 'playground') target = '#/playground';
+    else if (view === 'learn') {
+      const d = dayId || progress.currentDayId;
+      if (subStep === 'overview') target = `#/day/${d}/overview`;
+      else if (subStep === 'challenge') target = `#/day/${d}/challenge`;
+      else if (subStep === 'practice') target = taskId ? `#/day/${d}/practice/${taskId}` : `#/day/${d}/practice`;
+      else target = conceptId ? `#/day/${d}/theory/${conceptId}` : `#/day/${d}/theory`;
+    }
+
+    if (window.location.hash !== target) {
+      window.location.hash = target;
+    }
+  };
+
+  // Navigation handlers - default resumes where the user left off
+  const handleSelectDayFromRoadmap = (
+    dayId: string,
+    initialStep?: DaySubStep,
+    conceptId?: string,
+    taskId?: string
+  ) => {
+    const targetModule = getModuleById(dayId) || ALL_MODULES[0];
+    let step = initialStep;
+    let cId = conceptId;
+    let tId = taskId;
+
+    // If step was not explicitly provided or details are missing, resolve the user's resume point for that day
+    if (!step || (!cId && step === 'theory') || (!tId && step === 'practice')) {
+      const resume = resolveDayResumeTarget(targetModule, progress);
+      step = step || resume.subStep;
+      cId = cId || resume.conceptId;
+      tId = tId || resume.taskId;
+    }
+
+    const effectiveStep = step || 'theory';
+
+    setProgress((prev) =>
+      recordDayLocation(
+        {
+          ...prev,
+          currentDayId: dayId
+        },
+        dayId,
+        {
+          conceptId: cId,
+          subStep: effectiveStep,
+          taskId: tId
+        }
+      )
+    );
+
+    setActiveConceptId(cId);
+    setActiveTaskId(tId);
+    setDaySubStep(effectiveStep);
     setActiveView('learn');
+    syncHash('learn', dayId, effectiveStep, cId, tId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectModuleFromHeader = (moduleId: string) => {
-    setProgress((prev) => ({
-      ...prev,
-      currentDayId: moduleId
-    }));
-    setActiveConceptId(undefined);
-    setActiveTaskId(undefined);
-    setDaySubStep('theory');
-    setActiveView('learn');
+    const targetModule = getModuleById(moduleId) || ALL_MODULES[0];
+    const resume = resolveDayResumeTarget(targetModule, progress);
+    handleSelectDayFromRoadmap(moduleId, resume.subStep, resume.conceptId, resume.taskId);
   };
 
   const handleMarkTaskCompleted = (taskId: string) => {
@@ -167,13 +262,20 @@ export default function App() {
         onSelectModule={handleSelectModuleFromHeader}
         streakDays={progress.streakDays}
         totalXp={progress.xp}
-        onNavigateRoadmap={() => setActiveView('roadmap')}
+        onNavigateRoadmap={() => {
+          setActiveView('roadmap');
+          syncHash('roadmap');
+        }}
         onTogglePlayground={() => {
-          setActiveView(activeView === 'playground' ? 'roadmap' : 'playground');
+          const next = activeView === 'playground' ? 'roadmap' : 'playground';
+          setActiveView(next);
+          syncHash(next);
         }}
         isPlaygroundActive={activeView === 'playground'}
         onToggleErd={() => {
-          setActiveView(activeView === 'erd' ? 'roadmap' : 'erd');
+          const next = activeView === 'erd' ? 'roadmap' : 'erd';
+          setActiveView(next);
+          syncHash(next);
         }}
         isErdActive={activeView === 'erd'}
         onResetProgress={handleReset}
@@ -200,18 +302,42 @@ export default function App() {
                 <DayOverviewView
                   module={currentModule}
                   progress={progress}
-                  onBackToRoadmap={() => setActiveView('roadmap')}
+                  onBackToRoadmap={() => {
+                    setActiveView('roadmap');
+                    syncHash('roadmap');
+                  }}
                   onStartTheory={(conceptId) => {
                     setActiveConceptId(conceptId);
                     setDaySubStep('theory');
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        conceptId,
+                        subStep: 'theory'
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'theory', conceptId);
                   }}
                   onStartPractice={(conceptId, taskId) => {
                     setActiveConceptId(conceptId);
                     setActiveTaskId(taskId);
                     setDaySubStep('practice');
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        conceptId,
+                        subStep: 'practice',
+                        taskId
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'practice', conceptId, taskId);
                   }}
                   onStartChallenge={() => {
                     setDaySubStep('challenge');
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        subStep: 'challenge'
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'challenge');
                   }}
                 />
               )}
@@ -226,13 +352,33 @@ export default function App() {
                   isCompleted={currentConcept.tasks.every((t) =>
                     progress.completedTaskIds.includes(t.id)
                   )}
-                  onBackToOverview={() => setActiveView('roadmap')}
+                  onBackToOverview={() => {
+                    setActiveView('roadmap');
+                    syncHash('roadmap');
+                  }}
                   onStartPractice={(conceptId, taskId) => {
                     if (conceptId) setActiveConceptId(conceptId);
                     if (taskId) setActiveTaskId(taskId);
                     setDaySubStep('practice');
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        conceptId,
+                        subStep: 'practice',
+                        taskId
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'practice', conceptId, taskId);
                   }}
-                  onSelectConcept={(conceptId) => setActiveConceptId(conceptId)}
+                  onSelectConcept={(conceptId) => {
+                    setActiveConceptId(conceptId);
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        conceptId,
+                        subStep: 'theory'
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'theory', conceptId);
+                  }}
                 />
               )}
 
@@ -246,12 +392,33 @@ export default function App() {
                   onViewTheory={(conceptId) => {
                     setActiveConceptId(conceptId);
                     setDaySubStep('theory');
+                    setProgress((prev) =>
+                      recordDayLocation(prev, currentModule.id, {
+                        conceptId,
+                        subStep: 'theory'
+                      })
+                    );
+                    syncHash('learn', currentModule.id, 'theory', conceptId);
                   }}
-                  onBackToOverview={() => setActiveView('roadmap')}
+                  onBackToOverview={() => {
+                    setActiveView('roadmap');
+                    syncHash('roadmap');
+                  }}
                   onCompleteDay={handleCompleteDay}
                   isTaskCompleted={(id) => checkTaskCompleted(progress, id)}
                   onMarkTaskCompleted={handleMarkTaskCompleted}
-                  onActiveTaskChange={(taskTitle) => setActiveTaskTitle(taskTitle)}
+                  onActiveTaskChange={(taskTitle, conceptTitle, conceptId, taskId) => {
+                    setActiveTaskTitle(taskTitle);
+                    if (conceptId || taskId) {
+                      setProgress((prev) =>
+                        recordDayLocation(prev, currentModule.id, {
+                          conceptId,
+                          subStep: daySubStep,
+                          taskId
+                        })
+                      );
+                    }
+                  }}
                 />
               )}
             </>

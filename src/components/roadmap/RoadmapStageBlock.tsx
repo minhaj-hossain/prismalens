@@ -4,9 +4,10 @@ import {
   UserProgressState,
   calculateDayProgress,
   isDayUnlocked,
-  isDayCompleted
+  isDayCompleted,
+  resolveDayResumeTarget
 } from '../../lib/progress/storage';
-import { Check, Lock, ChevronRight } from 'lucide-react';
+import { Check, Lock, ChevronRight, Play } from 'lucide-react';
 
 interface RoadmapStageBlockProps {
   milestone: MilestoneData;
@@ -102,6 +103,20 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
     ? (selectedModule.shortTitle || selectedModule.title).replace(/^Day\s+\d+\s*[-—:]\s*/i, '')
     : '';
 
+  // Helper to keep card sentences clear, punchy, and concise
+  const formatConciseCardText = (title?: string, description?: string): string => {
+    let text = (title || description || '').trim();
+    text = text.replace(/^(Task\s+\d+|Query|Concept\s+\d+|Step\s+\d+|Prisma)[\s:–—-]+/i, '').trim();
+    if (text.length > 55) {
+      const firstSentence = text.split(/[.!?]/)[0].trim();
+      if (firstSentence.length >= 8 && firstSentence.length <= 55) {
+        return firstSentence;
+      }
+      return text.substring(0, 52).trim() + '...';
+    }
+    return text;
+  };
+
   // Extract up to 4 core items from concepts/tasks
   const allTasks = selectedModule ? selectedModule.concepts.flatMap(c =>
     c.tasks.map(t => ({
@@ -115,7 +130,7 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
   const cardItems: CardItem[] = displayTasks.map((t, idx) => ({
     id: t.id,
     number: idx + 1,
-    text: t.description || t.title,
+    text: formatConciseCardText(t.title, t.description),
     conceptId: t.conceptId,
     taskId: t.id,
     isCompleted: progress.completedTaskIds.includes(t.id),
@@ -128,7 +143,7 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
       cardItems.push({
         id: `learning-${i}`,
         number: cardItems.length + 1,
-        text: selectedModule.completionLearnings[i],
+        text: formatConciseCardText(selectedModule.completionLearnings[i]),
         conceptId: selectedModule.concepts[0]?.id || '',
         taskId: selectedModule.concepts[0]?.tasks[0]?.id || '',
         isCompleted: dayProgress.isCompleted,
@@ -198,6 +213,7 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
             const isSelected = mod.id === selectedDayId;
             const completed = isDayCompleted(progress, mod.id);
             const unlocked = isDayUnlocked(progress, mod.id, allModules);
+            const resumeTarget = resolveDayResumeTarget(mod, progress);
 
             return (
               <button
@@ -206,10 +222,11 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
                 onClick={() => {
                   if (unlocked) {
                     onSelectDayId(mod.id);
+                    onStartLearning(mod.id, resumeTarget.subStep, resumeTarget.conceptId, resumeTarget.taskId);
                   }
                 }}
                 disabled={!unlocked}
-                title={`Day ${mod.day}: ${mod.shortTitle || mod.title}`}
+                title={`Day ${mod.day}: Click to resume (${resumeTarget.label})`}
                 className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-mono font-bold text-sm sm:text-base transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? 'bg-sky-400 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.4)] scale-105 z-20'
@@ -241,6 +258,7 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
             const isSelected = mod.id === selectedDayId;
             const completed = isDayCompleted(progress, mod.id);
             const unlocked = isDayUnlocked(progress, mod.id, allModules);
+            const resumeTarget = resolveDayResumeTarget(mod, progress);
 
             return (
               <button
@@ -249,10 +267,11 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
                 onClick={() => {
                   if (unlocked) {
                     onSelectDayId(mod.id);
+                    onStartLearning(mod.id, resumeTarget.subStep, resumeTarget.conceptId, resumeTarget.taskId);
                   }
                 }}
                 disabled={!unlocked}
-                title={`Day ${mod.day}: ${mod.shortTitle || mod.title}`}
+                title={`Day ${mod.day}: Click to resume (${resumeTarget.label})`}
                 className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-mono font-bold text-sm sm:text-base transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? 'bg-sky-400 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.4)] scale-105 z-20'
@@ -293,7 +312,7 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
           )}
 
           {/* Box Header: "Day X – Title" on Left, "0% done" on Right */}
-          <div className="flex items-center justify-between gap-4 mb-5 sm:mb-6">
+          <div className="flex items-center justify-between gap-4 mb-4 sm:mb-5">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <h3
                 onClick={() => onStartLearning(selectedModule.id, 'theory')}
@@ -310,6 +329,42 @@ export const RoadmapStageBlock: React.FC<RoadmapStageBlockProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Resume Where You Left Off Banner CTA */}
+          {selectedModule && (
+            <div className="mb-4 sm:mb-5">
+              <button
+                onClick={() => {
+                  const target = resolveDayResumeTarget(selectedModule, progress);
+                  onStartLearning(
+                    selectedModule.id,
+                    target.subStep,
+                    target.conceptId,
+                    target.taskId
+                  );
+                }}
+                className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-sky-500/15 via-sky-500/10 to-[#081528] border border-sky-500/30 hover:border-sky-400 hover:from-sky-500/25 transition-all group cursor-pointer shadow-sm"
+              >
+                <div className="flex items-center space-x-3 text-left min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-sky-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md shadow-sky-400/20 group-hover:scale-105 transition-transform">
+                    <Play className="w-4 h-4 fill-slate-950 ml-0.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-mono uppercase text-sky-400 font-bold tracking-wider">
+                      Resume Where You Left Off
+                    </div>
+                    <div className="text-xs sm:text-sm text-white font-medium truncate">
+                      {resolveDayResumeTarget(selectedModule, progress).label}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1 font-mono text-xs text-sky-300 group-hover:text-white shrink-0 pl-3">
+                  <span className="hidden sm:inline">Continue</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* 2x2 Concept / Task Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">

@@ -2,146 +2,171 @@
   "id": "day-02",
   "slug": "prisma-setup-v7",
   "day": 2,
-  "title": "Modern Prisma v7 Setup & Configuration",
-  "shortTitle": "Setup & CLI Tooling",
+  "title": "Day 2 — Modern Prisma Setup & Configuration",
+  "shortTitle": "Setup & Configuration",
   "milestoneId": "milestone-1",
-  "description": "Create a working Prisma + PostgreSQL project, understand Prisma CLI tooling, manage connection pooling, and use introspection (db pull).",
+  "description": "Master datasource configuration, configure connection pooling for serverless and cloud PostgreSQL, and bridge legacy SQL snake_case tables to idiomatic TypeScript camelCase using @map and @@map.",
   "estimatedMinutes": 45,
   "completionLearnings": [
-    "Mastered essential Prisma CLI commands: init, generate, db pull, and studio",
-    "Configured connection pooling strings with PgBouncer query parameters",
-    "Mapped snake_case database tables to camelCase TypeScript models with @map and @@map"
+    "Understand datasource and client generator declarations in schema.prisma",
+    "Configure connection pooling parameters for serverless environments (PgBouncer, Neon, Supabase)",
+    "Map legacy snake_case database tables and columns to clean TypeScript camelCase models without altering live database tables"
   ],
   "concepts": [
     {
       "id": "day-02-concept-1",
       "order": 1,
-      "title": "Prisma CLI Commands & Lifecycle",
-      "shortDescription": "Master npx prisma generate, db pull, and connection pooling configuration.",
+      "title": "Datasource Architecture & Connection Pooling in Cloud Backends",
+      "shortDescription": "How Prisma connects to PostgreSQL, and why serverless environments require connection poolers to prevent database connection exhaustion.",
       "theory": {
-        "summary": "Prisma CLI is your developer cockpit: \"npx prisma generate\" reads schema.prisma and compiles typed models into node_modules/@prisma/client. In production serverless setups, connection pooling parameters (pgbouncer=true) prevent database connection exhaustion.",
+        "summary": "Every Prisma application starts with the datasource block in schema.prisma. It specifies the database provider (\"postgresql\", \"mysql\", \"sqlite\") and the connection URL:\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nIn traditional Node.js servers, a long-lived application process maintains a stable pool of 5–10 database connections. However, in modern serverless and containerized cloud platforms (like Vercel, AWS Lambda, or Cloud Run), incoming traffic can spin up hundreds of concurrent function instances simultaneously. If each function opens its own direct connection, PostgreSQL will quickly exceed its max_connections limit and crash with \"FATAL: remaining connection slots are reserved\".\n\nTo prevent this, production deployments route traffic through a connection pooler like PgBouncer or serverless pooling proxies. Prisma supports this by appending query parameters like \"?pgbouncer=true&connection_limit=10\" to your connection URL.",
         "targetHero": {
-          "language": "bash",
-          "badge": "Developer Lifecycle Commands",
-          "explanation": "Running generate recompiles types whenever schema.prisma changes.",
-          "code": "# Initialize a new Prisma project with PostgreSQL\nnpx prisma init --datasource-provider postgresql\n\n# Re-generate TypeScript Client after modifying schema.prisma\nnpx prisma generate"
+          "language": "prisma",
+          "badge": "Datasource & Generator Block",
+          "explanation": "The foundation of schema.prisma: database provider and client generator settings.",
+          "code": "datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"prisma-client-js\"\n}"
         },
         "explanation": [
-          "npx prisma generate: Must be called whenever schema.prisma changes or in build scripts (e.g. postinstall).",
-          "Connection pooling: Cloud Postgres providers (Supabase, Neon, AWS RDS) use connection poolers like PgBouncer. You append \"?pgbouncer=true&connection_limit=10\" to your connection URL."
+          "datasource db specifies the target database engine and the connection string loaded from the environment.",
+          "generator client instructs the Prisma CLI where and how to generate the TypeScript client during build time.",
+          "Serverless architectures must use pooled connection strings to prevent exhausting PostgreSQL connection limits."
         ],
-        "keyTakeaway": "Always run npx prisma generate in your CI/CD and deployment build steps.",
+        "keyTakeaway": "Always read database credentials from environment variables, and use connection pooling parameters in serverless environments.",
         "mcqs": [
           {
             "id": "mcq-2-1",
-            "question": "When should you run \"npx prisma generate\"?",
+            "question": "Why do cloud serverless backends require a connection pooler (like PgBouncer) when talking to PostgreSQL?",
             "options": [
-              "Only once when you first install Node.js",
-              "Every time you modify schema.prisma or install dependencies",
-              "Whenever a user submits an HTTP request to your API",
-              "Only when deploying to a Kubernetes cluster"
+              "PostgreSQL cannot execute SQL statements over TCP/IP without PgBouncer",
+              "Each serverless function instance opens separate connections, quickly overwhelming PostgreSQL connection limits",
+              "Prisma Client is not compatible with Linux containers without a pooler",
+              "Connection poolers compile TypeScript files faster"
             ],
             "correctIndex": 1,
-            "explanation": "Generating the client recompiles the TypeScript definitions to reflect your latest schema changes."
+            "explanation": "Serverless functions scale out horizontally. A connection pooler acts as a reverse proxy that multiplexes hundreds of transient function connections into a fixed pool of persistent database connections."
           }
         ]
       },
       "tasks": [
         {
           "id": "task-2-1",
-          "title": "Task 1 (Guided): Identify Client Generation Command",
-          "description": "Return the exact CLI command needed to regenerate the TypeScript client after a schema modification.",
+          "title": "Task 1 (Guided): Configure PostgreSQL Datasource & Generator",
+          "description": "Set up the datasource db block pointing to PostgreSQL using env(\"DATABASE_URL\") and configure the generator client in schema.prisma.",
           "type": "guided",
-          "targetModel": "cli",
-          "activeTab": "editor",
+          "targetModel": "datasource",
+          "activeTab": "schema",
           "instructions": [
-            "Return the string \"npx prisma generate\" from getGenerateCommand()"
+            "Define datasource db with provider = \"postgresql\" and url = env(\"DATABASE_URL\")",
+            "Define generator client with provider = \"prisma-client-js\""
           ],
-          "initialCode": "// Return the exact CLI command string needed to generate client types:\nexport function getGenerateCommand(): string {\n  return \"\";\n}",
-          "solutionCode": "export function getGenerateCommand(): string {\n  return \"npx prisma generate\";\n}",
-          "solutionExplanation": "npx prisma generate reads schema.prisma and updates the client types.",
+          "initialCode": "// Configure datasource db and generator client:\n",
+          "solutionCode": "datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"prisma-client-js\"\n}",
+          "solutionExplanation": "The datasource block connects Prisma to your PostgreSQL instance, and the generator block configures Prisma Client generation.",
           "hints": [
             {
               "level": 1,
-              "text": "The command starts with \"npx prisma\" and ends with \"generate\"."
+              "text": "Use provider = \"postgresql\" and url = env(\"DATABASE_URL\")."
+            },
+            {
+              "level": 2,
+              "text": "Use generator client { provider = \"prisma-client-js\" }."
             }
           ],
-          "validation": {},
-          "successMessage": "Correct! npx prisma generate keeps your TypeScript types in sync."
+          "validation": {
+            "codeContains": [
+              "provider = \"postgresql\"",
+              "url = env(\"DATABASE_URL\")",
+              "generator client"
+            ]
+          },
+          "successMessage": "Great job! Datasource and generator blocks are properly configured."
         },
         {
           "id": "task-2-2",
           "title": "Task 2 (Independent): Append Connection Pooling Parameters",
-          "description": "Append required parameters (?pgbouncer=true&connection_limit=10) to a PostgreSQL URL.",
+          "description": "Write a helper function to safely append required serverless pool parameters (pgbouncer=true and connection_limit=10) to a PostgreSQL URL.",
           "type": "independent",
           "targetModel": "url",
           "activeTab": "editor",
           "instructions": [
-            "Parse or manipulate basePostgresUrl",
-            "Ensure pgbouncer=true and connection_limit=10 are set as query params"
+            "Use the standard URL object to parse basePostgresUrl",
+            "Set search parameter pgbouncer to \"true\"",
+            "Set search parameter connection_limit to \"10\"",
+            "Return the updated URL string"
           ],
-          "initialCode": "export function formatPooledDbUrl(basePostgresUrl: string): string {\n  // Append required query parameters for connection pooling (pgbouncer=true, connection_limit=10)\n  return basePostgresUrl;\n}",
+          "initialCode": "export function formatPooledDbUrl(basePostgresUrl: string): string {\n  // TODO: Append pgbouncer=true and connection_limit=10 to the URL safely\n  return basePostgresUrl;\n}",
           "solutionCode": "export function formatPooledDbUrl(basePostgresUrl: string): string {\n  const url = new URL(basePostgresUrl);\n  url.searchParams.set('pgbouncer', 'true');\n  url.searchParams.set('connection_limit', '10');\n  return url.toString();\n}",
-          "solutionExplanation": "Uses standard URL searchParams to append connection pooling configuration safely.",
+          "solutionExplanation": "Using the WHATWG URL searchParams API ensures query strings are safely formatted and escaped.",
           "hints": [
             {
               "level": 1,
               "text": "Use new URL(basePostgresUrl) and url.searchParams.set(...)."
+            },
+            {
+              "level": 2,
+              "text": "Call url.toString() to return the updated connection string."
             }
           ],
-          "validation": {},
-          "successMessage": "Great job! Connection pooling prevents database pool exhaustion."
+          "validation": {
+            "codeContains": [
+              "searchParams",
+              "pgbouncer",
+              "connection_limit"
+            ]
+          },
+          "successMessage": "Well done! Connection pooling parameters ensure reliable database connectivity in high-concurrency environments."
         }
       ]
     },
     {
       "id": "day-02-concept-2",
       "order": 2,
-      "title": "Database Introspection & Field Mapping (@map, @@map)",
-      "shortDescription": "Keep TypeScript idiomatic in camelCase while retaining legacy snake_case in PostgreSQL.",
+      "title": "The Naming Bridge: Mapping snake_case SQL to camelCase TypeScript",
+      "shortDescription": "How to use @map and @@map to write clean, idiomatic TypeScript while preserving legacy database table and column names.",
       "theory": {
-        "summary": "In relational databases, column names frequently use snake_case (e.g. user_accounts, created_at). In TypeScript, idiomatic code uses camelCase. Prisma bridges this with @map(\"column_name\") on fields and @@map(\"table_name\") on models.",
+        "summary": "In relational database design, table and column names almost universally adhere to snake_case conventions:\n- Tables: tbl_customers, user_audit_logs, order_items\n- Columns: first_name, is_email_verified, created_at\n\nHowever, in TypeScript, writing user.first_name or user.is_email_verified violates idiomatic conventions (camelCase for properties, PascalCase for classes and models). Forcing your TypeScript codebase to adopt database snake_case feels clumsy.\n\nPrisma solves this dilemma with two mapping attributes:\n- @map(\"column_name\"): Applied directly to a field. In your TypeScript code, you write user.firstName, but Prisma sends queries to the underlying \"first_name\" column in SQL.\n- @@map(\"table_name\"): Applied at the bottom of a model block. In TypeScript, you write prisma.customer.findMany(), while Prisma targets the \"tbl_customers\" table in PostgreSQL.\n\nNeither attribute alters your database schema. They act as a compile-time translation bridge.",
         "targetHero": {
           "language": "prisma",
-          "badge": "Idiomatic Mapping Pattern",
-          "explanation": "TypeScript sees UserAccount and firstName; PostgreSQL sees user_accounts and first_name.",
+          "badge": "Mapping Blueprint",
+          "explanation": "TypeScript code accesses UserAccount and firstName; SQL queries run against user_accounts and first_name.",
           "code": "model UserAccount {\n  id        Int      @id @default(autoincrement())\n  firstName String   @map(\"first_name\")\n  createdAt DateTime @default(now()) @map(\"created_at\")\n\n  @@map(\"user_accounts\")\n}"
         },
         "explanation": [
-          "@map(\"raw_col\"): Instructs Prisma Client to expose this field in TypeScript with the model field name, while issuing SQL queries against the mapped column.",
-          "@@map(\"raw_table\"): Maps the model name to the actual SQL table name."
+          "@map applies to individual columns, letting you rename fields in TypeScript without changing database columns.",
+          "@@map applies to the whole model, letting you use clean PascalCase model names in TypeScript while querying legacy table names.",
+          "Using @map and @@map is especially crucial when working with pre-existing databases or third-party database schemas."
         ],
-        "keyTakeaway": "Never compromise TypeScript conventions for SQL naming rules; use @map and @@map.",
+        "keyTakeaway": "Use @map for columns and @@map for tables to keep your TypeScript codebase idiomatic without altering database table schemas.",
         "mcqs": [
           {
             "id": "mcq-2-2",
-            "question": "What is the difference between @map and @@map in Prisma?",
+            "question": "What is the exact distinction between @map and @@map in Prisma?",
             "options": [
-              "@map is for models, @@map is for fields",
-              "@map maps individual field/column names; @@map maps entire model/table names",
-              "@map works only with SQLite; @@map works with PostgreSQL",
-              "There is no difference; they are aliases"
+              "@map is for models, while @@map is for fields",
+              "@map maps an individual column name; @@map maps an entire table name",
+              "@map is deprecated in modern Prisma",
+              "@map only works with SQLite; @@map works with PostgreSQL"
             ],
             "correctIndex": 1,
-            "explanation": "Single @ applies to the field directly above it; double @@ applies to the entire model block."
+            "explanation": "A single @ directive operates on the field directly preceding it, whereas a double @@ directive operates on the entire model block."
           }
         ]
       },
       "tasks": [
         {
           "id": "task-2-3",
-          "title": "Task 1 (Guided): Map Legacy Customer Table and Columns",
-          "description": "Map model Customer to legacy table \"tbl_customers\" and field email to \"cust_email\".",
+          "title": "Task 1 (Guided): Map Customer Model and Email Column",
+          "description": "Map model Customer to legacy table \"tbl_customers\" and field email to column \"cust_email\" in schema.prisma.",
           "type": "guided",
           "targetModel": "Customer",
           "activeTab": "schema",
           "instructions": [
             "Add @map(\"cust_email\") to field email",
-            "Add @@map(\"tbl_customers\") to model Customer"
+            "Add @@map(\"tbl_customers\") at the bottom of model Customer"
           ],
-          "initialCode": "model Customer {\n  id    Int    @id @default(autoincrement())\n  email String // Map this to \"cust_email\"\n\n  // Map this model to \"tbl_customers\"\n}",
+          "initialCode": "model Customer {\n  id    Int    @id @default(autoincrement())\n  email String\n\n  // Add @@map for tbl_customers\n}",
           "solutionCode": "model Customer {\n  id    Int    @id @default(autoincrement())\n  email String @map(\"cust_email\")\n\n  @@map(\"tbl_customers\")\n}",
-          "solutionExplanation": "@map(\"cust_email\") maps the column, and @@map(\"tbl_customers\") maps the table.",
+          "solutionExplanation": "@map(\"cust_email\") maps the column, and @@map(\"tbl_customers\") maps the table in PostgreSQL.",
           "hints": [
             {
               "level": 1,
@@ -153,14 +178,18 @@
             }
           ],
           "validation": {
-            "targetModel": "Customer"
+            "targetModel": "Customer",
+            "codeContains": [
+              "@map(\"cust_email\")",
+              "@@map(\"tbl_customers\")"
+            ]
           },
-          "successMessage": "Awesome! Clean TypeScript camelCase mapped to legacy database snake_case."
+          "successMessage": "Great job! Clean TypeScript camelCase mapped to legacy database snake_case."
         },
         {
           "id": "task-2-4",
           "title": "Task 2 (Independent): Map Phone & Registered Date Columns",
-          "description": "Add snake_case mappings for phoneNumber -> phone_number and registeredAt -> registered_at.",
+          "description": "Add snake_case mappings for phoneNumber -> phone_number and registeredAt -> registered_at on model Customer.",
           "type": "independent",
           "targetModel": "Customer",
           "activeTab": "schema",
@@ -178,7 +207,11 @@
             }
           ],
           "validation": {
-            "targetModel": "Customer"
+            "targetModel": "Customer",
+            "codeContains": [
+              "@map(\"phone_number\")",
+              "@map(\"registered_at\")"
+            ]
           },
           "successMessage": "Well done! All fields mapped successfully."
         }
@@ -187,24 +220,24 @@
   ],
   "challenge": {
     "id": "day-02-challenge",
-    "title": "Day 2 Final Challenge: Legacy DB Migration Setup",
-    "scenario": "Take an introspected database schema with raw table names (auth_users, sys_logs), rename models into PascalCase TypeScript entities, and apply mappings.",
+    "title": "Day 2 Challenge: Modernize an Introspected Auth Schema",
+    "scenario": "Your engineering team used \"prisma db pull\" to introspect an existing legacy PostgreSQL database. The generated model uses raw snake_case table and column names. Clean up the AuthUser model so developers use clean camelCase properties while the database keeps its exact snake_case columns intact.",
     "tasks": [
       {
         "id": "challenge-2-1",
-        "title": "Step 1: Map Auth User Model",
+        "title": "Map AuthUser Model and Columns",
         "description": "Map model AuthUser to \"auth_users\" and field passwordHash to \"password_hash\".",
         "type": "challenge",
         "targetModel": "AuthUser",
         "activeTab": "schema",
         "instructions": [
-          "Define model AuthUser with id Int @id",
+          "Define model AuthUser with id Int @id @default(autoincrement())",
           "Map passwordHash String to \"password_hash\"",
           "Map model to \"auth_users\""
         ],
         "initialCode": "model AuthUser {\n  id           Int    @id @default(autoincrement())\n  passwordHash String\n\n  // Add @@map\n}",
         "solutionCode": "model AuthUser {\n  id           Int    @id @default(autoincrement())\n  passwordHash String @map(\"password_hash\")\n\n  @@map(\"auth_users\")\n}",
-        "solutionExplanation": "Ensures database integrity while preserving TypeScript naming rules.",
+        "solutionExplanation": "Ensures database table integrity while keeping TypeScript property naming clean and idiomatic.",
         "hints": [
           {
             "level": 1,
@@ -212,9 +245,13 @@
           }
         ],
         "validation": {
-          "targetModel": "AuthUser"
+          "targetModel": "AuthUser",
+          "codeContains": [
+            "@map(\"password_hash\")",
+            "@@map(\"auth_users\")"
+          ]
         },
-        "successMessage": "AuthUser mapped successfully!"
+        "successMessage": "AuthUser model and columns mapped successfully!"
       }
     ]
   }

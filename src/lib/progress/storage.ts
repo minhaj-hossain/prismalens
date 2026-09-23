@@ -2,13 +2,19 @@
 // USER PROGRESS & LOCAL STORAGE ENGINE
 // =============================================================================
 
-import { UserProgressState } from '../../types/curriculum';
+import { UserProgressState, ModuleData, DayLocation } from '../../types/curriculum';
 
-export type { UserProgressState };
+export type { UserProgressState, DayLocation };
 
-const STORAGE_KEY = 'prismalens_user_progress_v1';
+const STORAGE_KEY_V2 = 'prismalens_user_progress_v2';
+const STORAGE_KEY_V1 = 'prismalens_user_progress_v1';
 
-export const INITIAL_PROGRESS_STATE: UserProgressState = {
+export interface ExtendedUserProgressState extends UserProgressState {
+  version?: number;
+}
+
+export const INITIAL_PROGRESS_STATE: ExtendedUserProgressState = {
+  version: 2,
   completedTaskIds: [],
   completedConceptIds: [],
   completedDayIds: [],
@@ -17,19 +23,38 @@ export const INITIAL_PROGRESS_STATE: UserProgressState = {
   currentStep: 'theory',
   currentConceptId: 'day-01-concept-1',
   currentTaskId: undefined,
-  streakDays: 3,
+  streakDays: 1,
   lastActiveDate: new Date().toISOString(),
   xp: 0,
-  taskUserCode: {}
+  taskUserCode: {},
+  lastVisitedByDay: {}
 };
 
-export function loadUserProgress(): UserProgressState {
+export function loadUserProgress(): ExtendedUserProgressState {
   if (typeof window === 'undefined') return INITIAL_PROGRESS_STATE;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return INITIAL_PROGRESS_STATE;
-    const parsed = JSON.parse(raw);
-    return { ...INITIAL_PROGRESS_STATE, ...parsed };
+    // Try V2 first
+    const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
+    if (rawV2) {
+      const parsed = JSON.parse(rawV2);
+      return { ...INITIAL_PROGRESS_STATE, ...parsed, version: 2 };
+    }
+
+    // Attempt migration from V1
+    const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (rawV1) {
+      const parsedV1 = JSON.parse(rawV1);
+      const migrated: ExtendedUserProgressState = {
+        ...INITIAL_PROGRESS_STATE,
+        ...parsedV1,
+        version: 2
+      };
+      // Save migrated data to V2
+      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(migrated));
+      return migrated;
+    }
+
+    return INITIAL_PROGRESS_STATE;
   } catch (e) {
     console.error('Failed to load user progress:', e);
     return INITIAL_PROGRESS_STATE;
@@ -38,10 +63,11 @@ export function loadUserProgress(): UserProgressState {
 
 export const loadProgress = loadUserProgress;
 
-export function saveUserProgress(state: UserProgressState): void {
+export function saveUserProgress(state: ExtendedUserProgressState): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const payload = { ...state, version: 2 };
+    localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(payload));
   } catch (e) {
     console.error('Failed to save user progress:', e);
   }
@@ -49,7 +75,167 @@ export function saveUserProgress(state: UserProgressState): void {
 
 export const saveProgress = saveUserProgress;
 
-export function markTaskComplete(state: UserProgressState, taskId: string): UserProgressState {
+export function saveTaskDraft(state: ExtendedUserProgressState, taskId: string, code: string): ExtendedUserProgressState {
+  return {
+    ...state,
+    taskUserCode: {
+      ...(state.taskUserCode || {}),
+      [taskId]: code
+    }
+  };
+}
+
+export function getTaskDraft(state: ExtendedUserProgressState, taskId: string): string | undefined {
+  return state.taskUserCode?.[taskId];
+}
+
+export function recordDayLocation(
+  state: ExtendedUserProgressState,
+  dayId: string,
+  location: {
+    conceptId?: string;
+    subStep: 'overview' | 'theory' | 'practice' | 'challenge';
+    taskId?: string;
+  }
+): ExtendedUserProgressState {
+  const current = state.lastVisitedByDay || {};
+  return {
+    ...state,
+    lastVisitedByDay: {
+      ...current,
+      [dayId]: {
+        conceptId: location.conceptId || current[dayId]?.conceptId || state.currentConceptId || '',
+        subStep: location.subStep,
+        taskId: location.taskId !== undefined ? location.taskId : current[dayId]?.taskId,
+        timestamp: Date.now()
+      }
+    }
+  };
+}
+
+export function updateLearningPosition(
+  state: ExtendedUserProgressState,
+  pos: { dayId?: string; step?: any; conceptId?: string; taskId?: string }
+): ExtendedUserProgressState {
+  const targetDay = pos.dayId || state.currentDayId;
+  const currentVisited = state.lastVisitedByDay || {};
+  const updatedVisited = targetDay
+    ? {
+        ...currentVisited,
+        [targetDay]: {
+          conceptId: pos.conceptId || currentVisited[targetDay]?.conceptId || state.currentConceptId || '',
+          subStep: pos.step || currentVisited[targetDay]?.subStep || state.currentStep || 'theory',
+          taskId: pos.taskId !== undefined ? pos.taskId : currentVisited[targetDay]?.taskId,
+          timestamp: Date.now()
+        }
+      }
+    : currentVisited;
+
+  return {
+    ...state,
+    ...(pos.dayId ? { currentDayId: pos.dayId } : {}),
+    ...(pos.step ? { currentStep: pos.step } : {}),
+    ...(pos.conceptId !== undefined ? { currentConceptId: pos.conceptId } : {}),
+    ...(pos.taskId !== undefined ? { currentTaskId: pos.taskId } : {}),
+    lastVisitedByDay: updatedVisited
+  };
+}
+
+export function resolveDayResumeTarget(
+  module: ModuleData,
+  progress: UserProgressState
+): {
+  subStep: 'overview' | 'theory' | 'practice' | 'challenge';
+  conceptId?: string;
+  taskId?: string;
+  label: string;
+} {
+  // Case A: User previously visited this day and has a saved location
+  const saved = progress.lastVisitedByDay?.[module.id];
+  if (saved) {
+    if (saved.subStep === 'challenge') {
+      return {
+        subStep: 'challenge',
+        label: `Day ${module.day} Capstone Challenge`
+      };
+    }
+    const matchedConcept = module.concepts.find(c => c.id === saved.conceptId);
+    if (matchedConcept) {
+      const cIdx = module.concepts.findIndex(c => c.id === matchedConcept.id);
+      if (saved.subStep === 'practice') {
+        const tIdx = saved.taskId
+          ? matchedConcept.tasks.findIndex(t => t.id === saved.taskId)
+          : 0;
+        return {
+          subStep: 'practice',
+          conceptId: matchedConcept.id,
+          taskId: saved.taskId || matchedConcept.tasks[0]?.id,
+          label: `Concept ${cIdx + 1} · Task ${tIdx >= 0 ? tIdx + 1 : 1}`
+        };
+      }
+      return {
+        subStep: 'theory',
+        conceptId: matchedConcept.id,
+        taskId: saved.taskId,
+        label: `Concept ${cIdx + 1} Theory: ${matchedConcept.title}`
+      };
+    }
+  }
+
+  // Case B: Find first concept with uncompleted tasks
+  const firstIncompleteConcept = module.concepts.find(c =>
+    c.tasks.some(t => !progress.completedTaskIds.includes(t.id))
+  );
+
+  if (firstIncompleteConcept) {
+    const cIdx = module.concepts.findIndex(c => c.id === firstIncompleteConcept.id);
+    const firstIncompleteTask = firstIncompleteConcept.tasks.find(
+      t => !progress.completedTaskIds.includes(t.id)
+    );
+    const hasStartedConcept = firstIncompleteConcept.tasks.some(
+      t => progress.completedTaskIds.includes(t.id)
+    );
+
+    if (hasStartedConcept && firstIncompleteTask) {
+      const tIdx = firstIncompleteConcept.tasks.findIndex(t => t.id === firstIncompleteTask.id);
+      return {
+        subStep: 'practice',
+        conceptId: firstIncompleteConcept.id,
+        taskId: firstIncompleteTask.id,
+        label: `Concept ${cIdx + 1} · Task ${tIdx + 1}`
+      };
+    }
+
+    return {
+      subStep: 'theory',
+      conceptId: firstIncompleteConcept.id,
+      taskId: firstIncompleteTask?.id,
+      label: `Concept ${cIdx + 1} Theory: ${firstIncompleteConcept.title}`
+    };
+  }
+
+  // Case C: All concepts completed, check challenge
+  const challengeTasks = module.challenge?.tasks || [];
+  const challengeComplete =
+    challengeTasks.length > 0 &&
+    challengeTasks.every(t => progress.completedTaskIds.includes(t.id));
+
+  if (!challengeComplete && challengeTasks.length > 0) {
+    return {
+      subStep: 'challenge',
+      label: `Day ${module.day} Capstone Challenge`
+    };
+  }
+
+  // Case D: Completed Day review
+  return {
+    subStep: 'theory',
+    conceptId: module.concepts[0]?.id,
+    label: `Review Day ${module.day} Concepts`
+  };
+}
+
+export function markTaskComplete(state: ExtendedUserProgressState, taskId: string): ExtendedUserProgressState {
   if (state.completedTaskIds.includes(taskId)) return state;
   return {
     ...state,
@@ -58,23 +244,28 @@ export function markTaskComplete(state: UserProgressState, taskId: string): User
   };
 }
 
-export function markDayComplete(state: UserProgressState, dayId: string, xpEarned: number = 100): UserProgressState {
-  const completedDayIds = state.completedDayIds.includes(dayId)
-    ? state.completedDayIds
-    : [...state.completedDayIds, dayId];
+export function markDayComplete(state: ExtendedUserProgressState, dayId: string, xpEarned: number = 100): ExtendedUserProgressState {
+  // If day is already completed, do not re-award XP or duplicate streak increments
+  if (state.completedDayIds.includes(dayId)) {
+    return state;
+  }
+
+  const completedDayIds = [...state.completedDayIds, dayId];
+  const newStreak = calculateStreak(state.lastActiveDate, state.streakDays);
 
   return {
     ...state,
     completedDayIds,
     xp: state.xp + xpEarned,
-    streakDays: state.streakDays + 1,
+    streakDays: newStreak,
     lastActiveDate: new Date().toISOString()
   };
 }
 
 export function resetProgress(): UserProgressState {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_V2);
+    localStorage.removeItem(STORAGE_KEY_V1);
   }
   return { ...INITIAL_PROGRESS_STATE };
 }
@@ -236,16 +427,25 @@ export function deriveLastPosition(
   };
 }
 
-export function calculateStreak(lastActiveIso: string, currentStreak: number): number {
+export function calculateStreak(lastActiveIso: string, currentStreak: number, referenceDate: Date = new Date()): number {
   if (!lastActiveIso) return 1;
   const last = new Date(lastActiveIso);
-  const now = new Date();
+  if (isNaN(last.getTime())) return 1;
 
-  last.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
+  const lastDateOnly = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+  const refDateOnly = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
 
-  const diffDays = Math.round((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return currentStreak;
-  if (diffDays === 1) return currentStreak + 1;
-  return 1;
+  const diffMs = refDateOnly.getTime() - lastDateOnly.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    // Same calendar day: retain current streak (minimum 1)
+    return Math.max(1, currentStreak);
+  } else if (diffDays === 1) {
+    // Exactly consecutive calendar day: increment streak
+    return Math.max(1, currentStreak + 1);
+  } else {
+    // Gap day (> 1 day missed): streak resets to 1
+    return 1;
+  }
 }

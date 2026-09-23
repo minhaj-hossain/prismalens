@@ -3,6 +3,7 @@ import { ModuleData, PracticeTask } from '../../types/curriculum';
 import { InBrowserPrismaEngine, ExecutionResult } from '../../lib/prisma-engine/proxy-executor';
 import { validateTaskSubmission, TaskValidationResult } from '../../lib/prisma-engine/validator';
 import { PREVIEW_TABLES } from './InteractiveTableExplorer';
+import { SyntaxTokenizedEditor } from './SyntaxTokenizedEditor';
 import {
   CheckCircle2,
   AlertCircle,
@@ -40,7 +41,7 @@ interface LearningWorkspaceProps {
   onMarkTaskCompleted: (taskId: string) => void;
   onViewTheory?: (conceptId: string) => void;
   onBackToOverview?: () => void;
-  onActiveTaskChange?: (taskTitle: string, conceptTitle: string) => void;
+  onActiveTaskChange?: (taskTitle: string, conceptTitle: string, conceptId?: string, taskId?: string) => void;
 }
 
 export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
@@ -151,13 +152,34 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [validationResult, setValidationResult] = useState<TaskValidationResult | null>(null);
-  const [consoleTab, setConsoleTab] = useState<'grid' | 'sql' | 'type'>('grid');
+  const [consoleTab, setConsoleTab] = useState<'grid' | 'sql' | 'type' | 'diff'>('grid');
   const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
+  const [hasAcceptedChallenge, setHasAcceptedChallenge] = useState(false);
 
   // Help Accordion & Copy States
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [hasCopiedCode, setHasCopiedCode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Syntax bracket balance diagnostic
+  const syntaxDiagnostic = useMemo(() => {
+    let curly = 0;
+    let paren = 0;
+    let square = 0;
+    for (let i = 0; i < editorCode.length; i++) {
+      const c = editorCode[i];
+      if (c === '{') curly++;
+      else if (c === '}') curly--;
+      else if (c === '(') paren++;
+      else if (c === ')') paren--;
+      else if (c === '[') square++;
+      else if (c === ']') square--;
+    }
+    if (curly !== 0) return { valid: false, message: curly > 0 ? 'Unclosed {' : 'Extra }' };
+    if (paren !== 0) return { valid: false, message: paren > 0 ? 'Unclosed (' : 'Extra )' };
+    if (square !== 0) return { valid: false, message: square > 0 ? 'Unclosed [' : 'Extra ]' };
+    return { valid: true, message: 'Syntax Ready' };
+  }, [editorCode]);
 
   // Sync state when active step changes
   useEffect(() => {
@@ -168,6 +190,10 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     setIsHelpOpen(false);
     setLeftTab('brief');
     setIsDrawerCollapsed(false);
+
+    if (activeStep.type !== 'challenge') {
+      setHasAcceptedChallenge(false);
+    }
 
     const norm = (activeTask.targetModel || 'student').toLowerCase();
     const key = norm.endsWith('s') ? norm : `${norm}s`;
@@ -180,7 +206,9 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     if (onActiveTaskChange) {
       onActiveTaskChange(
         `Task ${activeStep.taskIndex + 1}: ${activeTask.title}`,
-        activeStep.conceptTitle
+        activeStep.conceptTitle,
+        activeStep.conceptId,
+        activeTask.id
       );
     }
   }, [currentStepIdx, activeTask.id]);
@@ -272,25 +300,17 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     }
   };
 
+  // Code Change Helper: resets validation when code is modified
+  const handleEditorCodeChange = (newCode: string) => {
+    setEditorCode(newCode);
+    if (validationResult) {
+      setValidationResult(null);
+    }
+  };
+
   // Quick chips insertion into editor
   const handleInsertQuickToken = (token: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setEditorCode((prev) => prev + ` ${token} `);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const updated = editorCode.substring(0, start) + token + editorCode.substring(end);
-    setEditorCode(updated);
-
-    setTimeout(() => {
-      if (textarea) {
-        textarea.focus();
-        textarea.selectionStart = textarea.selectionEnd = start + token.length;
-      }
-    }, 0);
+    handleEditorCodeChange(editorCode + ` ${token} `);
   };
 
   // Format Code Helper
@@ -300,7 +320,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
       .map((line) => line.trimEnd())
       .join('\n')
       .trim();
-    setEditorCode(cleaned);
+    handleEditorCodeChange(cleaned);
   };
 
   // Copy Code Helper
@@ -310,32 +330,6 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     setTimeout(() => setHasCopiedCode(false), 2000);
   };
 
-  // Tab key handling for 2 spaces indentation
-  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleRunQuery();
-      return;
-    }
-
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const updated = editorCode.substring(0, start) + '  ' + editorCode.substring(end);
-      setEditorCode(updated);
-
-      setTimeout(() => {
-        if (textarea) {
-          textarea.selectionStart = textarea.selectionEnd = start + 2;
-        }
-      }, 0);
-    }
-  };
-
   const isCurrentTaskPassed = isTaskCompleted(activeTask.id) || !!validationResult?.passed;
   const isLastTaskInConcept =
     activeStep.type === 'concept' &&
@@ -343,6 +337,32 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
   const hasMoreConcepts =
     activeStep.conceptIndex !== undefined &&
     activeStep.conceptIndex + 1 < module.concepts.length;
+
+  // Unified CTA Next Step Label & Primary Action
+  const nextButtonLabel = useMemo(() => {
+    if (activeStep.type === 'challenge') {
+      return `Claim 100 XP & Finish Day ${module.day}`;
+    }
+    if (isLastTaskInConcept) {
+      if (hasMoreConcepts) {
+        return `Next: Concept ${(activeStep.conceptIndex ?? 0) + 2} Theory`;
+      }
+      return `Start Day ${module.day} Final Challenge`;
+    }
+    return `Next Task (${activeStep.taskIndex + 2}/${activeStep.totalTasksInConcept})`;
+  }, [activeStep, isLastTaskInConcept, hasMoreConcepts, module.day]);
+
+  const handlePrimaryAction = () => {
+    if (validationResult?.passed) {
+      if (activeStep.type === 'challenge') {
+        onCompleteDay(100);
+      } else {
+        handleNextStep();
+      }
+    } else {
+      handleRunQuery();
+    }
+  };
 
   // Metadata calculations for Task criteria
   const targetModelDisplay = (activeTask.targetModel || 'student').toLowerCase();
@@ -361,10 +381,6 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
   // Active Database Table
   const currentTable = PREVIEW_TABLES[selectedTableKey] || PREVIEW_TABLES.students;
-
-  // Line numbers
-  const lineCount = Math.max(editorCode.split('\n').length, 12);
-  const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
   // Parameterized SQL for Explain Query tab
   const derivedSql = useMemo(() => {
@@ -527,113 +543,140 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
             {/* VIEW A: TASK BRIEF */}
             {leftTab === 'brief' && (
-              <div className="space-y-6">
-                {/* Main Problem Headline */}
-                <div className="space-y-3">
+              <div className="space-y-5 max-w-2xl">
+                {/* Header: Breadcrumb & Title */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center space-x-2 text-[11px] font-mono text-sky-400 font-semibold tracking-wide uppercase">
+                    <span>
+                      {activeStep.type === 'challenge'
+                        ? `Day ${module.day} Capstone`
+                        : `Concept ${activeStep.conceptIndex !== undefined ? activeStep.conceptIndex + 1 : 1}`}
+                    </span>
+                    <span className="text-slate-600">/</span>
+                    <span className="text-slate-400 font-normal">
+                      Task {activeStep.taskIndex + 1} of {activeStep.totalTasksInConcept}
+                    </span>
+                    {isCurrentTaskPassed && (
+                      <span className="ml-auto inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] lowercase font-sans font-medium">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Completed</span>
+                      </span>
+                    )}
+                  </div>
+
                   <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug">
-                    {activeTask.description || activeTask.title}
+                    {activeTask.title}
                   </h1>
 
-                  {/* Clean Inline Criteria Badges (No Clunky Card Nesting) */}
-                  <div className="flex flex-wrap items-center gap-2 font-mono text-xs pt-1">
-                    <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#071426] border border-sky-900/60 text-slate-300">
-                      <span className="text-slate-500 text-[10px] uppercase font-bold">
-                        Table:
-                      </span>
-                      <span className="text-white font-bold">{targetTableDisplay}</span>
-                    </div>
+                  {/* Context Scenario (only rendered if non-empty and distinct from title) */}
+                  {activeTask.description && activeTask.description !== activeTask.title && (
+                    <p className="text-sm text-slate-300 leading-relaxed font-sans">
+                      {activeTask.description}
+                    </p>
+                  )}
+                </div>
 
-                    <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#071426] border border-sky-900/60 text-slate-300">
-                      <span className="text-slate-500 text-[10px] uppercase font-bold">
-                        Columns:
-                      </span>
-                      <span className="text-sky-300 font-bold">{targetColumnsDisplay}</span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#071426] border border-sky-900/60 text-slate-300">
-                      <span className="text-slate-500 text-[10px] uppercase font-bold">
-                        Expected:
-                      </span>
-                      <span className="text-white font-bold">{expectedRowsDisplay}</span>
-                    </div>
-
-                    <button
-                      onClick={() => setLeftTab('table')}
-                      className="px-2.5 py-1 rounded-lg text-xs text-sky-400 hover:text-sky-300 hover:underline transition cursor-pointer"
-                    >
-                      View Table →
-                    </button>
+                {/* Compact Context Metadata Strip */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 px-3 rounded-lg bg-[#071322]/80 border border-sky-950/80 text-xs font-mono">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-slate-500 text-[10px] uppercase font-bold">Target Model:</span>
+                    <span className="text-sky-300 font-semibold">{targetTableDisplay}</span>
                   </div>
+                  <span className="text-slate-700 hidden sm:inline">·</span>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-slate-500 text-[10px] uppercase font-bold">Expected:</span>
+                    <span className="text-slate-200">{expectedRowsDisplay}</span>
+                  </div>
+                  <span className="text-slate-700 hidden sm:inline">·</span>
+                  <button
+                    onClick={() => setLeftTab('table')}
+                    className="text-sky-400 hover:text-sky-300 transition text-[11px] underline underline-offset-2 ml-auto sm:ml-0 cursor-pointer"
+                  >
+                    Inspect Table Data →
+                  </button>
                 </div>
 
                 {/* Directives Checklist */}
                 {activeTask.instructions && activeTask.instructions.length > 0 && (
-                  <div className="space-y-2.5 pt-2">
+                  <div className="space-y-2.5 pt-1">
                     <div className="text-[11px] uppercase font-mono font-bold text-slate-400 tracking-wider">
                       Requirements
                     </div>
-                    <ul className="space-y-2 text-xs sm:text-sm text-slate-300">
+                    <div className="space-y-2">
                       {activeTask.instructions.map((inst, i) => (
-                        <li key={i} className="flex items-start space-x-2.5 leading-relaxed">
-                          {isCurrentTaskPassed ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-                          )}
-                          <span>{inst}</span>
-                        </li>
+                        <div
+                          key={i}
+                          className={`flex items-start space-x-3 p-3 rounded-xl border transition-colors ${
+                            isCurrentTaskPassed
+                              ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-100'
+                              : 'bg-[#06101E] border-sky-950/80 text-slate-200'
+                          }`}
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            {isCurrentTaskPassed ? (
+                              <CheckSquare className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <div className="w-4 h-4 rounded border border-sky-700/80 bg-[#071426] flex items-center justify-center text-[10px] font-mono text-sky-400 font-bold">
+                                {i + 1}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-xs sm:text-[13px] leading-relaxed font-sans">
+                            {inst}
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
-                {/* Collapsible Hints & Reference Solution Accordion */}
-                <div className="rounded-xl border border-sky-950 bg-[#07101E] overflow-hidden">
+                {/* Progressive Hints & Reference Solution Drawer */}
+                <div className="pt-2 border-t border-sky-950/60">
                   <button
                     onClick={() => setIsHelpOpen(!isHelpOpen)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-xs font-mono text-slate-300 hover:text-white hover:bg-sky-950/30 transition cursor-pointer"
+                    className="flex items-center space-x-2 text-xs font-mono text-slate-400 hover:text-sky-300 transition cursor-pointer py-1"
                   >
-                    <div className="flex items-center space-x-2">
-                      <HelpCircle className="w-4 h-4 text-sky-400" />
-                      <span className="font-semibold">Need a hint or reference solution?</span>
-                    </div>
+                    <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+                    <span className="font-medium">
+                      {isHelpOpen ? 'Hide hints & solution' : 'Need guidance or solution?'}
+                    </span>
                     {isHelpOpen ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
                     )}
                   </button>
 
                   {isHelpOpen && (
-                    <div className="p-4 border-t border-sky-950/80 space-y-3.5 bg-[#050C17] text-xs">
+                    <div className="mt-2.5 p-4 rounded-xl border border-sky-950 bg-[#06101E] space-y-3.5 animate-in fade-in duration-150">
                       {activeTask.hints && activeTask.hints.length > 0 && (
                         <div className="space-y-2">
                           {activeTask.hints.map((hint, idx) => (
                             <div
                               key={idx}
-                              className="flex items-start space-x-2 text-slate-300 leading-relaxed font-sans"
+                              className="flex items-start space-x-2.5 text-xs text-slate-300 leading-relaxed font-sans"
                             >
                               <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                              <span>
-                                <strong className="text-amber-300 font-mono">
+                              <div>
+                                <span className="text-amber-300 font-mono font-semibold">
                                   Hint {hint.level}:
-                                </strong>{' '}
+                                </span>{' '}
                                 {hint.text}
-                              </span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       )}
 
                       {activeTask.solutionCode && (
-                        <div className="pt-2 border-t border-sky-950 space-y-2">
+                        <div className="pt-3 border-t border-sky-950/80 space-y-2">
                           <div className="flex items-center justify-between font-mono text-[11px]">
                             <span className="text-slate-400 uppercase font-bold">
                               Reference Solution
                             </span>
                             <button
                               onClick={() => setEditorCode(activeTask.solutionCode)}
-                              className="px-2.5 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 transition cursor-pointer"
+                              className="px-2.5 py-1 rounded-md bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 transition cursor-pointer"
                             >
                               Apply to Editor
                             </button>
@@ -645,25 +688,6 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                       )}
                     </div>
                   )}
-                </div>
-
-                {/* Mini Database Peek at Bottom of Brief */}
-                <div className="rounded-xl border border-sky-950/80 bg-[#060D1A] p-3.5 space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <div className="flex items-center space-x-1.5">
-                      <span>🗄️</span>
-                      <span className="font-bold text-slate-200">{currentTable.name} Table Peek</span>
-                    </div>
-                    <button
-                      onClick={() => setLeftTab('table')}
-                      className="text-sky-400 hover:text-sky-300 text-[11px] cursor-pointer"
-                    >
-                      Open full table view →
-                    </button>
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Columns: {currentTable.columns.map((c) => c.name).join(', ')} ({currentTable.rows.length} total rows)
-                  </div>
                 </div>
               </div>
             )}
@@ -767,7 +791,63 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
         {/* RIGHT PANE: Code IDE Editor + Docked Reactive Results Drawer  */}
         {/* ============================================================= */}
         <div className="w-full lg:w-[55%] flex flex-col h-full bg-[#03070E] overflow-hidden">
-          {/* Top IDE Window Header */}
+          {activeStep.type === 'challenge' && !hasAcceptedChallenge ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#020612] text-center overflow-y-auto">
+              <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/30 via-[#071326] to-[#030814] shadow-2xl space-y-5">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center mx-auto text-amber-400 shadow-xl shadow-amber-500/10">
+                  <Trophy className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold px-3 py-1 rounded-full bg-amber-950/80 border border-amber-700/60 inline-block">
+                    Day {module.day} Capstone Challenge
+                  </span>
+                  <h3 className="text-xl font-bold text-white mt-3">
+                    {module.challenge.title}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-2 leading-relaxed font-sans">
+                    {module.challenge.scenario}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#02050B]/90 border border-sky-950 text-left font-mono text-xs space-y-2">
+                  <div className="text-[10px] text-amber-400/90 uppercase font-bold tracking-wider">
+                    Evaluation Ground Rules:
+                  </div>
+                  <ul className="text-[11px] text-slate-300 space-y-1.5 list-disc list-inside font-sans">
+                    <li>
+                      <strong className="text-sky-300 font-mono">Live Execution Assertions:</strong> Real data and table state evaluated.
+                    </li>
+                    <li>
+                      <strong className="text-sky-300 font-mono">Target Model:</strong> {activeTask.targetModel || 'Query Target'}
+                    </li>
+                    <li>
+                      <strong className="text-sky-300 font-mono">Synthesis:</strong> Combines concepts mastered in Day {module.day}.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-center space-x-3 pt-2">
+                  {onViewTheory && module.concepts[0] && (
+                    <button
+                      onClick={() => onViewTheory(module.concepts[0].id)}
+                      className="px-4 py-2.5 rounded-lg bg-[#091526] hover:bg-[#0E203A] border border-sky-950 text-slate-300 hover:text-white font-mono text-xs transition cursor-pointer"
+                    >
+                      Review Concepts
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setHasAcceptedChallenge(true)}
+                    className="px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono font-bold text-xs shadow-lg shadow-amber-400/25 transition hover:scale-105 active:scale-95 cursor-pointer flex items-center space-x-2"
+                  >
+                    <span>Accept Challenge & Open Editor</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Top IDE Window Header */}
           <div className="h-10 px-4 bg-[#071222] border-b border-sky-950/80 flex items-center justify-between shrink-0 font-mono text-xs">
             {/* Window Dots & Tab */}
             <div className="flex items-center space-x-3">
@@ -809,7 +889,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
               </button>
 
               <button
-                onClick={() => setEditorCode(activeTask.initialCode)}
+                onClick={() => handleEditorCodeChange(activeTask.initialCode)}
                 className="flex items-center space-x-1 px-2 py-1 rounded hover:bg-sky-950/40 hover:text-slate-200 transition cursor-pointer text-xs"
                 title="Reset to Initial Code"
               >
@@ -821,23 +901,10 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
           {/* Editor Body: Full Proportional Height */}
           <div className="flex-1 flex overflow-hidden bg-[#02050B]">
-            {/* Line Numbers */}
-            <div className="w-10 py-4 select-none text-right pr-3 font-mono text-xs text-slate-600 bg-[#010408] border-r border-sky-950/60 shrink-0">
-              {lineNumbers.map((num) => (
-                <div key={num} className="leading-6">
-                  {num}
-                </div>
-              ))}
-            </div>
-
-            {/* Code Input */}
-            <textarea
-              ref={textareaRef}
+            <SyntaxTokenizedEditor
               value={editorCode}
-              onChange={(e) => setEditorCode(e.target.value)}
-              onKeyDown={handleEditorKeyDown}
-              spellCheck={false}
-              className="flex-1 p-4 bg-transparent font-mono text-xs sm:text-sm text-sky-100 placeholder-slate-600 outline-none resize-none leading-6 overflow-auto"
+              onChange={handleEditorCodeChange}
+              onRunQuery={handleRunQuery}
               placeholder="// Write your Prisma query here..."
             />
           </div>
@@ -860,9 +927,21 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                   </button>
                 )
               )}
+
+              <div className="hidden xl:flex items-center pl-2 border-l border-sky-950 shrink-0">
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono ${
+                    syntaxDiagnostic.valid
+                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40'
+                      : 'bg-amber-950/60 text-amber-400 border border-amber-800/40'
+                  }`}
+                >
+                  {syntaxDiagnostic.valid ? '✓ Syntax Ready' : `⚠️ ${syntaxDiagnostic.message}`}
+                </span>
+              </div>
             </div>
 
-            {/* Right: Back & Run Buttons */}
+            {/* Right: Back & Unified Run / Next Action Button */}
             <div className="flex items-center space-x-2 ml-auto shrink-0">
               <span className="text-slate-500 text-[11px] hidden xl:inline mr-2">
                 Ctrl + Enter to run
@@ -877,12 +956,30 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
               </button>
 
               <button
-                onClick={handleRunQuery}
+                onClick={handlePrimaryAction}
                 disabled={isExecuting}
-                className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 disabled:bg-sky-800 text-slate-950 font-mono font-bold text-xs shadow-md shadow-sky-400/20 transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-lg font-mono font-bold text-xs shadow-md transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  validationResult?.passed
+                    ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-emerald-400/20'
+                    : 'bg-sky-400 hover:bg-sky-300 disabled:bg-sky-800 text-slate-950 shadow-sky-400/20'
+                }`}
               >
-                <Play className="w-3.5 h-3.5 fill-slate-950" />
-                <span>{isExecuting ? 'Running...' : 'Run & Check'}</span>
+                {isExecuting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                    <span>Running...</span>
+                  </>
+                ) : validationResult?.passed ? (
+                  <>
+                    <span>{nextButtonLabel}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-slate-950" />
+                    <span>Run & Check</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -958,7 +1055,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      Compiled SQL
+                      Simulated SQL (AST)
                     </button>
 
                     <button
@@ -971,6 +1068,20 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                     >
                       Inferred Type
                     </button>
+
+                    {executionResult.tableDiff && executionResult.tableDiff.length > 0 && (
+                      <button
+                        onClick={() => setConsoleTab('diff')}
+                        className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition cursor-pointer flex items-center space-x-1 ${
+                          consoleTab === 'diff'
+                            ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30'
+                            : 'text-emerald-400 hover:text-emerald-200'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Data Diff ({executionResult.tableDiff.length})</span>
+                      </button>
+                    )}
                   </div>
 
                   <button
@@ -1053,15 +1164,23 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                     </div>
                   )}
 
-                  {/* TAB 2: Compiled SQL */}
+                  {/* TAB 2: Simulated SQL (AST) */}
                   {consoleTab === 'sql' && (
-                    <div className="p-3 rounded-lg border border-sky-950 bg-[#060D1A] font-mono text-xs space-y-1">
-                      <div className="text-[10px] text-slate-400 uppercase font-bold">
-                        Generated PostgreSQL Query
+                    <div className="p-3 rounded-lg border border-sky-950 bg-[#060D1A] font-mono text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">
+                          Simulated PostgreSQL Query (AST-Mapped)
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800/60 font-sans">
+                          In-Browser Simulation
+                        </span>
                       </div>
-                      <pre className="text-emerald-300 whitespace-pre overflow-x-auto">
+                      <pre className="text-emerald-300 whitespace-pre overflow-x-auto p-2 bg-[#02050B] rounded border border-sky-950">
                         {derivedSql}
                       </pre>
+                      <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                        PrismaLens dynamically converts PrismaClient operations into standard SQL for educational inspection. See SIMULATOR_CAPABILITIES.md for driver and engine details.
+                      </p>
                     </div>
                   )}
 
@@ -1077,56 +1196,63 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                     </div>
                   )}
 
-                  {/* Advance CTA Button when passed */}
-                  {isCurrentTaskPassed && (
-                    <div className="pt-2 border-t border-sky-950">
-                      {activeStep.type === 'concept' ? (
-                        isLastTaskInConcept ? (
-                          hasMoreConcepts ? (
-                            <button
-                              onClick={handleNextStep}
-                              className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-sky-400 hover:bg-sky-300 text-slate-950 font-mono font-bold text-xs shadow-md shadow-sky-400/20 transition hover:scale-[1.01] cursor-pointer"
-                            >
-                              <span>Next: Concept {activeStep.conceptIndex! + 2} Theory</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={handleNextStep}
-                              className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono font-bold text-xs shadow-md shadow-amber-400/20 transition hover:scale-[1.01] cursor-pointer"
-                            >
-                              <span>Start Day {module.day} Final Challenge</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </button>
-                          )
-                        ) : (
-                          <button
-                            onClick={handleNextStep}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-sky-400 hover:bg-sky-300 text-slate-950 font-mono font-bold text-xs shadow-md shadow-sky-400/20 transition hover:scale-[1.01] cursor-pointer"
-                          >
-                            <span>
-                              Next Task ({activeStep.taskIndex + 2}/{activeStep.totalTasksInConcept})
-                            </span>
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        )
-                      ) : (
-                        <button
-                          onClick={() => onCompleteDay(100)}
-                          className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-mono font-bold text-xs shadow-md shadow-emerald-400/20 transition hover:scale-[1.01] cursor-pointer"
+                  {/* TAB 4: Data Diff (Mutations) */}
+                  {consoleTab === 'diff' && executionResult.tableDiff && (
+                    <div className="space-y-2 font-mono text-xs overflow-y-auto max-h-48 pr-1">
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">
+                        Row-Level Table Mutations ({executionResult.tableDiff.length} affected)
+                      </div>
+                      {executionResult.tableDiff.map((diff, dIdx) => (
+                        <div
+                          key={dIdx}
+                          className="p-2.5 rounded-lg border border-sky-950 bg-[#060D1A] flex flex-col space-y-1.5"
                         >
-                          <Trophy className="w-4 h-4 text-slate-950" />
-                          <span>Claim 100 XP & Finish Day {module.day}</span>
-                        </button>
-                      )}
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-sky-300">Table: {diff.table}</span>
+                            <div className="flex items-center space-x-1.5 text-[10px]">
+                              {diff.inserted.length > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800">
+                                  +{diff.inserted.length} Inserted
+                                </span>
+                              )}
+                              {diff.updated.length > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800">
+                                  ~{diff.updated.length} Updated
+                                </span>
+                              )}
+                              {diff.deleted.length > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800">
+                                  -{diff.deleted.length} Deleted
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-slate-300 bg-[#02050B] p-2 rounded text-[11px] overflow-x-auto space-y-1">
+                            {diff.inserted.map((row, i) => (
+                              <pre key={i} className="text-emerald-400">+{JSON.stringify(row, null, 2)}</pre>
+                            ))}
+                            {diff.updated.map((item, i) => (
+                              <div key={i} className="space-y-0.5 border-b border-sky-950/50 pb-1 last:border-0 last:pb-0">
+                                <div className="text-slate-500">Before: {JSON.stringify(item.before)}</div>
+                                <div className="text-amber-300">After: {JSON.stringify(item.after)}</div>
+                              </div>
+                            ))}
+                            {diff.deleted.map((row, i) => (
+                              <pre key={i} className="text-rose-400 line-through">-{JSON.stringify(row, null, 2)}</pre>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
+  </div>
+</div>
   );
 };

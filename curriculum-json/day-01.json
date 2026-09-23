@@ -5,90 +5,91 @@
   "title": "Day 1 — Why Prisma?",
   "shortTitle": "Why Prisma?",
   "milestoneId": "milestone-1",
-  "description": "See how Prisma makes database work easier to write, understand, and maintain in a TypeScript application.",
+  "description": "Learn why traditional raw SQL drivers leave your TypeScript code vulnerable to silent runtime bugs, and how Prisma generates a fully type-safe, auto-completing database client directly from your schema.",
   "estimatedMinutes": 45,
   "completionLearnings": [
-    "Understand why database data and TypeScript code do not naturally use the same types and structure",
-    "Understand how schema.prisma, Prisma Client, and Prisma Migrate fit together",
-    "Write a simple Prisma Client query and understand what it does in the database"
+    "Understand the Object-Relational Impedance Mismatch and why raw SQL strings are invisible to the TypeScript compiler",
+    "Learn how Prisma Client dynamically infers TypeScript return types directly from your query parameters",
+    "Use findUnique and select to fetch lean, targeted records without over-fetching database columns",
+    "Understand the three architectural pillars: schema.prisma, Prisma Client, and Prisma Migrate"
   ],
   "concepts": [
     {
       "id": "day-01-concept-1",
       "order": 1,
-      "title": "Why Databases and TypeScript Disagree (and How Prisma Fixes It)",
-      "shortDescription": "Why SQL strings are invisible to TypeScript and how Prisma gives your backend a generated, strongly typed database API.",
+      "title": "The Type-Safety Gap: Why Raw SQL Fails TypeScript",
+      "shortDescription": "Why raw SQL strings leave your backend blind to typos and schema changes, and how Prisma gives your database queries real compile-time guarantees.",
       "theory": {
-        "summary": "When you query a database using SQL drivers in Node.js, SQL is treated as a plain string: db.query('SELECT id, name, email FROM users WHERE id = $1', [userId]).\n\nTypeScript cannot inspect or type-check the contents of an arbitrary SQL string. It sees a function call returning an untyped driver result. If a database column is renamed or removed, TypeScript cannot warn you—the mismatch is only discovered when that query runs.\n\nPrisma solves this by generating strongly typed client methods directly from your schema.prisma file. Prisma Client uses generated types based on your schema, allowing TypeScript to catch invalid model names, misspelled fields, and incorrect argument types while you type your code. Prisma does not replace SQL; SQL remains the language executed by the database, while Prisma provides a type-checked API to work with it.",
+        "summary": "When you query a database using raw database drivers (like pg or mysql2) in Node.js, your SQL query is treated as an opaque string:\ndb.query('SELECT id, name, email FROM users WHERE id = $1', [userId])\n\nTo the TypeScript compiler, that SQL string is a complete black box. TypeScript cannot parse SQL grammar, inspect column names, or verify that the \"users\" table even exists. The driver returns an untyped any or generic row object. If someone renames the database column from \"email\" to \"user_email\", TypeScript won't say a word—you only discover the catastrophic null pointer in production when an active user attempts to log in.\n\nPrisma eliminates this entire class of bugs by reversing the relationship: your schema.prisma defines your data models, and Prisma generates a dedicated, strongly typed TypeScript client tailored to your exact database. When you write prisma.user.findUnique({ where: { id } }), TypeScript knows every column, every type, and every constraint in real time.",
         "targetHero": {
           "language": "typescript",
-          "badge": "Example Query",
-          "explanation": "Your query determines the shape of the returned TypeScript value. With select, Prisma infers only the chosen fields on the returned user.",
-          "code": "// Your query determines the shape of the returned TypeScript value\nconst user = await prisma.user.findUnique({\n  where: { id: 1 },\n  select: {\n    id: true,\n    name: true,\n    email: true\n  }\n});\n// TypeScript infers: { id: number; name: string; email: string } | null"
+          "badge": "Query Shapes Return Type",
+          "explanation": "Your query parameters directly dictate the inferred TypeScript type. With select, only the requested fields exist on the returned object.",
+          "code": "// The TypeScript compiler automatically derives the exact shape from your query:\nconst user = await prisma.user.findUnique({\n  where: { id: 1 },\n  select: {\n    id: true,\n    name: true,\n    email: true\n  }\n});\n\n// Inferred Type:\n// { id: number; name: string; email: string } | null\n// Trying to access user.passwordHash will fail at compile time!"
         },
         "explanation": [
-          "Working directly with SQL gives you precise control over the database, but TypeScript does not automatically know what fields a particular SQL string will return.",
-          "Prisma Client uses generated types from your Prisma schema, so TypeScript catches invalid model names, field names, and query arguments while you write code.",
-          "Prisma does not replace SQL. It gives your TypeScript application a higher-level, strongly typed API, while SQL remains the underlying language the relational database executes."
+          "Raw SQL drivers treat queries as unverified strings. If a column is dropped or misspelled, errors only surface at runtime.",
+          "Prisma Client is generated directly from your schema, so TypeScript validates your model names, field names, and input types while you type.",
+          "Prisma does not replace SQL. Under the hood, Prisma compiles your typed query into clean, parameterized SQL executed by PostgreSQL."
         ],
         "stepBreakdowns": [
           {
             "stepNumber": 1,
-            "stepTitle": "Working directly with SQL",
-            "codeSnippet": "const result = await db.query(\n  'SELECT id, name, email FROM users WHERE id = $1',\n  [userId]\n);\n\n// TypeScript does not derive the returned row shape from this SQL string:\nconst user = result.rows[0];",
-            "explanation": "TypeScript treats SQL as an opaque string. If the database schema changes but the SQL string is not updated, the mismatch is usually only discovered when that query executes at runtime."
+            "stepTitle": "The Raw Driver Problem",
+            "codeSnippet": "// Untyped and fragile:\nconst result = await db.query('SELECT id, full_name FROM users WHERE id = $1', [id]);\nconst user = result.rows[0]; // Type is 'any'\nconsole.log(user.email); // undefined — no compiler warning!",
+            "explanation": "The driver cannot tell TypeScript what columns were selected. Typos pass build checks silently."
           },
           {
             "stepNumber": 2,
-            "stepTitle": "Querying with Prisma Client",
-            "codeSnippet": "const user = await prisma.user.findUnique({\n  where: { id: userId },\n  select: { id: true, name: true, email: true }\n});\n// Inferred result: { id: number; name: string; email: string } | null",
-            "explanation": "Prisma validates model names, field names, and input types while you write. The fields you specify in select determine the exact TypeScript shape of the returned record."
+            "stepTitle": "The Prisma Type-Safe Solution",
+            "codeSnippet": "const user = await prisma.user.findUnique({\n  where: { id },\n  select: { id: true, name: true }\n});\n// TypeScript knows: user is { id: number; name: string } | null",
+            "explanation": "Autocompletion guides every property. Renaming a schema column immediately highlights every affected query across your codebase."
           }
         ],
-        "keyTakeaway": "Prisma gives your TypeScript backend a generated, strongly typed API for working with your database, while SQL remains the underlying language of the database.",
+        "keyTakeaway": "Prisma turns database queries from fragile, untyped strings into verified, auto-completing TypeScript operations with zero runtime surprises.",
         "commonMistakes": [
-          "Assuming Prisma replaces SQL knowledge: Prisma generates SQL queries under the hood, and understanding database concepts remains essential.",
-          "Using \"as any\" to bypass TypeScript errors instead of fixing invalid field names against the schema."
+          "Relying on \"as any\" or manual type assertions: never cast Prisma query outputs to \"any\"; let Prisma infer the exact shape.",
+          "Assuming Prisma replaces SQL knowledge: Prisma generates SQL, and understanding indexes, constraints, and execution plans remains essential."
         ],
         "mcqs": [
           {
             "id": "mcq-1-1",
-            "question": "Why can Prisma catch a typo like \"where: { user_mail: email }\" before the code runs?",
+            "question": "Why does TypeScript fail to catch typos inside raw SQL query strings like \"SELECT usr_name FROM users\"?",
             "options": [
-              "PostgreSQL checks the query string before TypeScript compiles",
-              "Prisma Client has generated types based on the Prisma schema",
-              "Express validates Prisma queries automatically at build time",
-              "TypeScript natively understands raw SQL queries without tools"
+              "TypeScript only supports frontend browser JavaScript code",
+              "TypeScript treats string literals as opaque text and cannot inspect SQL grammar or live database schemas",
+              "PostgreSQL deliberately hides column names from the Node.js process",
+              "The TypeScript compiler requires an active database connection to parse SQL"
             ],
             "correctIndex": 1,
-            "explanation": "Prisma generates TypeScript type definitions from your schema.prisma models, allowing TypeScript to flag any property that does not exist on the model."
+            "explanation": "To TypeScript, a raw SQL query is merely a string. It cannot know what tables or columns exist in your database without an ORM or code generator like Prisma."
           }
         ]
       },
       "tasks": [
         {
           "id": "task-1-1",
-          "title": "Task 1 (Guided): Read and Shape a Prisma Query",
-          "description": "Inspect a Prisma query that requests specific fields with select, and complete the query to return only id and name.",
+          "title": "Task 1 (Guided): Read and Shape a Record by Primary Key",
+          "description": "Use prisma.user.findUnique to fetch a single user by ID, selecting only their id and name to create an efficient, type-safe return payload.",
           "type": "guided",
           "targetModel": "user",
           "activeTab": "editor",
           "instructions": [
             "Call prisma.user.findUnique",
-            "Set where: { id: userId }",
-            "Use select: { id: true, name: true } to return only id and name"
+            "Pass where: { id: userId } to target the primary key",
+            "Use select: { id: true, name: true } so only id and name are retrieved"
           ],
-          "initialCode": "// In Prisma, your query determines the shape of the returned value.\n// Complete the query to fetch user by id with only 'id' and 'name':\nexport async function getUserNameOnly(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    // TODO: Use select to return only id and name\n  });\n}",
+          "initialCode": "// In Prisma, your query directly determines the shape of the returned value.\n// Complete the query to fetch user by id with only 'id' and 'name':\nexport async function getUserNameOnly(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    // TODO: Use select to return only id and name\n  });\n}",
           "solutionCode": "export async function getUserNameOnly(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    select: { id: true, name: true }\n  });\n}",
-          "solutionExplanation": "Using findUnique with where: { id: userId } queries by unique identifier, and select restricts returned fields to id and name, giving you a lean, inferred return type.",
+          "solutionExplanation": "findUnique targets fields marked with @id or @unique in schema.prisma. The select object restricts the database query to just the two requested columns.",
           "hints": [
             {
               "level": 1,
-              "text": "Use the \"select\" option inside findUnique."
+              "text": "Add the \"select\" option inside findUnique."
             },
             {
               "level": 2,
-              "text": "Add \"select: { id: true, name: true }\" to only retrieve those two columns."
+              "text": "Write select: { id: true, name: true } to project only those columns."
             }
           ],
           "validation": {
@@ -102,23 +103,23 @@
               "name"
             ]
           },
-          "successMessage": "Well done! Notice how select directly controls both the SQL columns queried and the inferred TypeScript shape."
+          "successMessage": "Great job! Notice how the returned TypeScript type is strictly { id: number; name: string } | null."
         },
         {
           "id": "task-1-2",
-          "title": "Task 2 (Guided): Write a findUnique Query by Unique Email",
-          "description": "Write a type-safe findUnique query looking up a user by their unique email address, selecting id, name, and email.",
+          "title": "Task 2 (Guided): Query by Unique Constraint (Email Lookup)",
+          "description": "Look up an account by their unique email address and project their id, name, and email fields.",
           "type": "guided",
           "targetModel": "user",
           "activeTab": "editor",
           "instructions": [
             "Call prisma.user.findUnique",
-            "Pass where: { email } to filter by unique email",
-            "Use select to return id, name, and email"
+            "Pass where: { email } to filter by the unique email address",
+            "Select id, name, and email in the response"
           ],
           "initialCode": "// Write a type-safe findUnique query looking up a user by email:\nexport async function getUserByEmail(email: string) {\n  // TODO: Call prisma.user.findUnique with where: { email } and select id, name, email\n}",
           "solutionCode": "export async function getUserByEmail(email: string) {\n  return await prisma.user.findUnique({\n    where: { email },\n    select: { id: true, name: true, email: true }\n  });\n}",
-          "solutionExplanation": "findUnique targets fields marked @unique or @id in schema.prisma. Passing email in where accurately identifies a single user.",
+          "solutionExplanation": "findUnique requires a unique identifier (such as @id or @unique). Because email has @unique in the schema, Prisma allows filtering by email.",
           "hints": [
             {
               "level": 1,
@@ -126,7 +127,7 @@
             },
             {
               "level": 2,
-              "text": "Include id: true, name: true, and email: true inside the select object."
+              "text": "Set id: true, name: true, and email: true inside the select block."
             }
           ],
           "validation": {
@@ -141,31 +142,31 @@
               "email"
             ]
           },
-          "successMessage": "Great work! You wrote a clean findUnique query with explicit field selection."
+          "successMessage": "Clean execution! By targeting a @unique field, Prisma guarantees at most one row is returned."
         },
         {
           "id": "task-1-3",
-          "title": "Task 3 (Independent): Fix an Invalid Field Name (Without \"as any\")",
-          "description": "A developer used \"as any\" to silence TypeScript on a nonexistent field user_mail. Fix the query to use the schema-defined email field without any type bypasses.",
+          "title": "Task 3 (Independent): Eliminate Type Bypasses (\"as any\")",
+          "description": "A developer used \"as any\" to silence a compiler error caused by a misspelled field name. Fix the query to use the actual schema field \"email\" without hacks.",
           "type": "independent",
           "targetModel": "user",
           "activeTab": "editor",
           "instructions": [
-            "Remove \"as any\" from the query argument",
-            "Replace the nonexistent field user_mail with email in the where filter",
+            "Remove \"as any\" completely from the query",
+            "Replace the invalid field user_mail with the schema-defined email field",
             "Select id and email in the returned record"
           ],
           "initialCode": "export async function getActiveMember(email: string) {\n  // A developer used \"as any\" to silence TypeScript on a nonexistent field 'user_mail'.\n  // Fix the query to use the schema-defined 'email' field without using 'as any':\n  return await prisma.user.findUnique({\n    where: { user_mail: email } as any,\n  });\n}",
           "solutionCode": "export async function getActiveMember(email: string) {\n  return await prisma.user.findUnique({\n    where: { email },\n    select: { id: true, email: true }\n  });\n}",
-          "solutionExplanation": "In Prisma, where arguments must match actual model fields defined in schema.prisma. Removing \"as any\" restores TypeScript compile-time verification.",
+          "solutionExplanation": "Never silence TypeScript with \"as any\". Aligning query properties with schema.prisma restores compile-time verification across your codebase.",
           "hints": [
             {
               "level": 1,
-              "text": "Delete \"as any\" and change user_mail to email."
+              "text": "Delete \"as any\" and rename user_mail to email."
             },
             {
               "level": 2,
-              "text": "Add select: { id: true, email: true } for a clean return shape."
+              "text": "Add select: { id: true, email: true } to project clean fields."
             }
           ],
           "validation": {
@@ -175,68 +176,180 @@
               "email"
             ]
           },
-          "successMessage": "Awesome job! You fixed the query bug without resorting to type-silencing hacks."
+          "successMessage": "Well done! You eliminated the type hack and restored genuine compile-time safety."
         }
       ]
     },
     {
       "id": "day-01-concept-2",
       "order": 2,
-      "title": "How Prisma Fits Together (Schema, Client & Migrate)",
-      "shortDescription": "How schema.prisma, generated Prisma Client, and Prisma Migrate connect your TypeScript backend to your database.",
+      "title": "Lean Projections: Why SELECT * Hurts Production Apps",
+      "shortDescription": "Why fetching entire database rows degrades performance, and how Prisma select shapes both network payloads and TypeScript types.",
       "theory": {
-        "summary": "Prisma consists of three coordinated tools that work together in your application workflow:\n\n1. schema.prisma — The central schema definition that describes your data models, relations, and generator settings.\n2. Prisma Client — The strongly typed query builder generated directly from your schema, which you import into your backend code to query the database.\n3. Prisma Migrate — The CLI tool that reads changes in schema.prisma, creates versioned SQL migration files, and applies them to your database.\n\nEditing schema.prisma does not automatically alter your live database tables. When you change a model in schema.prisma, Prisma Migrate generates and executes the SQL DDL needed to update your database, and Prisma Client generates fresh TypeScript types so your code immediately reflects the new schema.",
+        "summary": "When developers query database tables without specifying columns, the database defaults to SELECT * (fetching every column on the row). In a small toy app, this seems harmless. In production, it creates severe problems:\n\n1. The Payload Tax: Tables often contain heavy text columns, metadata blobs, or internal audit fields. Pulling 50 columns over the network when you only need a user's name wastes memory, CPU serialization, and network bandwidth.\n2. The Security Leak: If your user table has password_hash or reset_token columns, a lazy SELECT * risks serializing sensitive secrets into public API JSON responses.\n3. Memory Pressure: In high-throughput Node.js microservices, allocating thousands of bloated row objects stresses the V8 garbage collector.\n\nWith Prisma, select acts as a surgical scalpel. Specifying select: { name: true, email: true } does two things simultaneously:\n- Compiles down to SELECT \"name\", \"email\" at the PostgreSQL engine level.\n- Narrows the TypeScript return type so only name and email exist on the resulting object.",
         "targetHero": {
-          "language": "prisma",
-          "badge": "Central Schema Definition",
-          "explanation": "In modern Prisma, the generator block configures where and how Prisma Client is generated, while datasource configures the database connection.",
-          "code": "datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../generated/prisma\"\n}\n\nmodel User {\n  id    Int     @id @default(autoincrement())\n  email String  @unique\n  name  String?\n}"
+          "language": "typescript",
+          "badge": "Surgical Column Selection",
+          "explanation": "select guarantees that unrequested columns are never transmitted across the database connection.",
+          "code": "// Fetching a student directory without dragging heavy fields across the wire:\nconst students = await prisma.student.findMany({\n  select: {\n    name: true,\n    department: true\n  }\n});\n\n// Return Type: Array<{ name: string; department: string }>\n// Fields like 'id', 'age', and 'city' are omitted from SQL and TypeScript!"
         },
         "explanation": [
-          "The Prisma schema describes your data models and tells Prisma how to generate the client.",
-          "Prisma Client is generated from your schema into your project, giving you auto-completed, type-checked methods like prisma.user.findUnique().",
-          "Prisma Migrate translates schema changes into versioned SQL migrations and runs them against your database.",
-          "Don't duplicate Prisma's generated database types unnecessarily. Use Prisma's inferred types where they fit, and define separate application or API types (such as DTOs) when you need a different shape."
+          "By default, findMany() fetches every scalar column in the model (equivalent to SQL SELECT *).",
+          "Using select restricts both the SQL columns queried from PostgreSQL and the inferred TypeScript object properties.",
+          "Security best practice: Always use select on sensitive tables to guarantee authentication hashes are never sent to callers."
         ],
         "stepBreakdowns": [
           {
             "stepNumber": 1,
-            "stepTitle": "Describe data in schema.prisma",
-            "codeSnippet": "model User {\n  id    Int     @id @default(autoincrement())\n  email String  @unique\n  name  String?\n}",
-            "explanation": "You define models, attributes (@id, @unique), and scalar types in schema.prisma."
+            "stepTitle": "Default findMany (Over-fetching)",
+            "codeSnippet": "const all = await prisma.student.findMany();\n// SQL: SELECT id, name, age, department, city FROM students;\n// Fetches every column even if you only need the student's name.",
+            "explanation": "Transfers all data across the wire, consuming unnecessary memory and bandwidth."
           },
           {
             "stepNumber": 2,
-            "stepTitle": "Generate and query with Prisma Client",
-            "codeSnippet": "import { prisma } from './db';\n\nconst user = await prisma.user.findUnique({\n  where: { email: 'alice@example.com' }\n});",
-            "explanation": "Running \"prisma generate\" creates Prisma Client with types tailored to your User model."
+            "stepTitle": "Field Projection with select",
+            "codeSnippet": "const lean = await prisma.student.findMany({\n  select: { name: true, department: true }\n});\n// SQL: SELECT name, department FROM students;",
+            "explanation": "Only requests the exact columns needed. PostgreSQL executes faster and memory allocation drops."
           }
         ],
-        "keyTakeaway": "schema.prisma defines your data models, Prisma Client gives your TypeScript code a typed query API, and Prisma Migrate manages changes to your database schema.",
+        "keyTakeaway": "Always project fields intentionally with select to keep database queries fast, lightweight, and leak-proof.",
         "commonMistakes": [
-          "Assuming modifying schema.prisma automatically updates live database tables without running a migration.",
-          "Thinking generator client is the Prisma Client itself: the generator block simply configures how and where the client is generated."
+          "Mixing select and include on the same level: Prisma disallows using select and include together on the root object—use nested select instead.",
+          "Assuming select is just a client-side filter: select translates directly into the SQL column list; unselected columns never leave the database server."
         ],
         "mcqs": [
           {
             "id": "mcq-1-2",
-            "question": "What happens when you add a new field to schema.prisma?",
+            "question": "What happens in PostgreSQL when you write prisma.user.findMany({ select: { name: true } })?",
             "options": [
-              "The live database tables are immediately updated in real time without any commands",
-              "You must run a migration to update the database, and generate Prisma Client to update TypeScript types",
-              "Prisma deletes and recreates all database tables automatically",
-              "TypeScript automatically writes the SQL ALTER TABLE command on save"
+              "PostgreSQL runs SELECT * and Prisma deletes the other fields in Node.js memory",
+              "PostgreSQL runs SELECT \"name\" FROM \"users\", transmitting only the name column over the network wire",
+              "PostgreSQL creates a temporary view in the database",
+              "TypeScript compiles the query into an in-memory array filter"
             ],
             "correctIndex": 1,
-            "explanation": "Editing schema.prisma updates your schema definition. You then use Prisma Migrate to apply SQL changes to your database and generate Prisma Client to refresh TypeScript types."
+            "explanation": "Prisma generates a targeted SQL query that requests only the specific column from PostgreSQL, saving network and database resources."
           }
         ]
       },
       "tasks": [
         {
           "id": "task-1-4",
-          "title": "Task 1 (Guided): Querying with Precise Field Shape",
-          "description": "Write a query function to retrieve only the id and email of a user for authentication verification, observing how select restricts both the returned SQL columns and the TypeScript inferred shape.",
+          "title": "Task 1 (Guided): Query a Student Directory with Lean Projection",
+          "description": "Retrieve all students from the database using prisma.student.findMany, selecting only the name and department columns.",
+          "type": "guided",
+          "targetModel": "student",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.student.findMany",
+            "Use select: { name: true, department: true }",
+            "Do not fetch unused columns like id, age, or city"
+          ],
+          "initialCode": "// Fetch a lightweight student directory list:\nexport async function getStudentDirectory() {\n  // TODO: Call prisma.student.findMany selecting only 'name' and 'department'\n}",
+          "solutionCode": "export async function getStudentDirectory() {\n  return await prisma.student.findMany({\n    select: {\n      name: true,\n      department: true\n    }\n  });\n}",
+          "solutionExplanation": "Using findMany with select outputs SELECT \"name\", \"department\" FROM \"students\", returning a typed array of student names and departments.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Call await prisma.student.findMany({ select: { ... } });"
+            },
+            {
+              "level": 2,
+              "text": "Inside select, set name: true and department: true."
+            }
+          ],
+          "validation": {
+            "targetModel": "student",
+            "requiredMethod": "findMany",
+            "requiredFieldsInSelect": [
+              "name",
+              "department"
+            ]
+          },
+          "successMessage": "Great job! You executed a lean multi-row projection without over-fetching."
+        },
+        {
+          "id": "task-1-5",
+          "title": "Task 2 (Independent): Build a Safe User Profile Card",
+          "description": "Complete the getPublicProfile function to look up a user by their unique email and project only their public name and email fields.",
+          "type": "independent",
+          "targetModel": "user",
+          "activeTab": "editor",
+          "instructions": [
+            "Call prisma.user.findUnique with where: { email }",
+            "Select only name and email in the return payload"
+          ],
+          "initialCode": "export async function getPublicProfile(email: string) {\n  // TODO: Query user by email and return only 'name' and 'email'\n}",
+          "solutionCode": "export async function getPublicProfile(email: string) {\n  return await prisma.user.findUnique({\n    where: { email },\n    select: { name: true, email: true }\n  });\n}",
+          "solutionExplanation": "Selecting name and email ensures private or internal fields are never queried or leaked to the caller.",
+          "hints": [
+            {
+              "level": 1,
+              "text": "Filter by where: { email }."
+            },
+            {
+              "level": 2,
+              "text": "Include select: { name: true, email: true }."
+            }
+          ],
+          "validation": {
+            "targetModel": "user",
+            "requiredMethod": "findUnique",
+            "requiredWhereClauses": [
+              "email"
+            ],
+            "requiredFieldsInSelect": [
+              "name",
+              "email"
+            ]
+          },
+          "successMessage": "Safe and clean! The returned payload contains strictly the public profile fields."
+        }
+      ]
+    },
+    {
+      "id": "day-01-concept-3",
+      "order": 3,
+      "title": "The Prisma Triad: Schema, Client, and Migrate",
+      "shortDescription": "How schema.prisma, Prisma Client, and Prisma Migrate coordinate to keep your database, SQL migrations, and TypeScript types in perfect sync.",
+      "theory": {
+        "summary": "Prisma is not a monolithic library; it is a coordinated toolchain composed of three distinct parts:\n\n1. schema.prisma (The Single Source of Truth):\n   Here you declare your datasource (e.g. PostgreSQL), client generators, and data models with their relations and constraints. Everything in your application flows outward from this declarative file.\n\n2. Prisma Client (The Type-Safe Query Engine):\n   A tailor-made query builder generated into your node_modules. It provides auto-completion, compile-time validation, and query compilation. You never manually write type definitions for your database tables—Prisma generates them automatically.\n\n3. Prisma Migrate (The Database Evolution Engine):\n   A version-controlled database migration tool. When you modify a model in schema.prisma, Prisma Migrate calculates the difference, writes human-readable SQL migration scripts (e.g. ALTER TABLE), and applies them to your database.\n\nEditing schema.prisma does not magically alter live PostgreSQL tables. You run migrations to update the database, and run \"prisma generate\" to refresh your TypeScript types.",
+        "targetHero": {
+          "language": "prisma",
+          "badge": "The Declarative Blueprint",
+          "explanation": "The schema defines the database connection and the client generator in one place.",
+          "code": "datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"prisma-client-js\"\n}\n\nmodel User {\n  id    Int     @id @default(autoincrement())\n  email String  @unique\n  name  String?\n}"
+        },
+        "explanation": [
+          "schema.prisma is the single source of truth for your database structure and application types.",
+          "Prisma Client is generated directly into your codebase, offering full auto-completion and compile-time verification.",
+          "Prisma Migrate converts schema edits into versioned SQL files so database changes are reproducible across development, staging, and production."
+        ],
+        "keyTakeaway": "schema.prisma defines your data models, Prisma Migrate updates your PostgreSQL tables with SQL DDL, and Prisma Client gives your TypeScript code a strongly typed query API.",
+        "commonMistakes": [
+          "Expecting database tables to change automatically just by saving schema.prisma without running a migration.",
+          "Manually writing TypeScript interfaces that duplicate database models instead of utilizing Prisma-generated types."
+        ],
+        "mcqs": [
+          {
+            "id": "mcq-1-3",
+            "question": "What command synchronizes your TypeScript types after you add a new model to schema.prisma?",
+            "options": [
+              "tsc --watch",
+              "prisma generate",
+              "npm start",
+              "docker restart postgres"
+            ],
+            "correctIndex": 1,
+            "explanation": "Running \"prisma generate\" inspects schema.prisma and regenerates the Prisma Client TypeScript definitions in node_modules."
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "task-1-6",
+          "title": "Task 1 (Guided): Query Auth Credentials with Precision",
+          "description": "Look up an account by ID and project only the authentication credentials (id and email) for an internal token verification check.",
           "type": "guided",
           "targetModel": "user",
           "activeTab": "editor",
@@ -246,7 +359,7 @@
           ],
           "initialCode": "// Fetch user auth credentials returning only 'id' and 'email':\nexport async function getUserAuthCredentials(userId: number) {\n  // TODO: Call prisma.user.findUnique with where: { id: userId }\n  // Select only 'id' and 'email'\n}",
           "solutionCode": "export async function getUserAuthCredentials(userId: number) {\n  return await prisma.user.findUnique({\n    where: { id: userId },\n    select: { id: true, email: true }\n  });\n}",
-          "solutionExplanation": "select shapes the SQL query to only fetch id and email from the users table, and TypeScript infers { id: number; email: string } | null.",
+          "solutionExplanation": "select limits the SQL query to only fetch id and email from the users table, and TypeScript infers { id: number; email: string } | null.",
           "hints": [
             {
               "level": 1,
@@ -271,55 +384,56 @@
           "successMessage": "Great job! You shaped the query with select and saw how TypeScript infers only the requested fields."
         },
         {
-          "id": "task-1-5",
-          "title": "Task 2 (Independent): Retrieve Public Profile Fields",
-          "description": "Complete the getPublicProfile function to look up a user by their unique email and select only name and email.",
+          "id": "task-1-7",
+          "title": "Task 2 (Independent): Query with Schema-Defined Unique Constraint",
+          "description": "Demonstrate client type-safety by fetching the first user matching a verified unique constraint, returning their id, name, and email fields.",
           "type": "independent",
           "targetModel": "user",
           "activeTab": "editor",
           "instructions": [
-            "Call prisma.user.findUnique",
+            "Call prisma.user.findFirst",
             "Filter by where: { email }",
-            "Use select to return only name and email"
+            "Select only id, name, and email"
           ],
-          "initialCode": "export async function getPublicProfile(email: string) {\n  // TODO: Query user by email and return only 'name' and 'email'\n}",
-          "solutionCode": "export async function getPublicProfile(email: string) {\n  return await prisma.user.findUnique({\n    where: { email },\n    select: { name: true, email: true }\n  });\n}",
-          "solutionExplanation": "Selecting name and email ensures internal fields like passwords or timestamps are never fetched or leaked.",
+          "initialCode": "// Fetch a single user record projecting only id, name, and email:\nexport async function getVerifiedUser(email: string) {\n  // TODO: Call prisma.user.findFirst with where: { email } and select id, name, and email\n}",
+          "solutionCode": "export async function getVerifiedUser(email: string) {\n  return await prisma.user.findFirst({\n    where: { email },\n    select: { id: true, name: true, email: true }\n  });\n}",
+          "solutionExplanation": "Using findFirst with select projects exactly the desired fields, guaranteeing optimal network payload size.",
           "hints": [
             {
               "level": 1,
-              "text": "Pass where: { email }."
+              "text": "Filter by where: { email }."
             },
             {
               "level": 2,
-              "text": "Include select: { name: true, email: true }."
+              "text": "Specify select: { id: true, name: true, email: true }."
             }
           ],
           "validation": {
             "targetModel": "user",
-            "requiredMethod": "findUnique",
+            "requiredMethod": "findFirst",
             "requiredWhereClauses": [
               "email"
             ],
             "requiredFieldsInSelect": [
+              "id",
               "name",
               "email"
             ]
           },
-          "successMessage": "Well done! Inferred types cleanly match your selected fields."
+          "successMessage": "Great work! You fetched the verified user record with a strict projection."
         }
       ]
     }
   ],
   "challenge": {
     "id": "day-01-challenge",
-    "title": "Day 1 Challenge: Replace a Legacy User Lookup",
-    "scenario": "Your team is refactoring a legacy Express service. You need to replace an untyped raw SQL helper with a strongly typed Prisma query that retrieves a user by their unique email.",
+    "title": "Day 1 Challenge: The Production API Refactor",
+    "scenario": "Your backend engineering team is deprecating an old Express microservice that relied on fragile, untyped raw SQL strings. You are tasked with replacing the legacy lookup query with a type-safe Prisma query that fetches an active user by email and projects only their id, name, and email fields.",
     "tasks": [
       {
         "id": "challenge-1-1",
-        "title": "Replace Legacy User Lookup with Typed Prisma Query",
-        "description": "Rewrite the legacy getUser function to find a user by email using prisma.user.findUnique. Select only id, name, and email without using raw SQL or \"as any\".",
+        "title": "Replace Legacy Raw SQL with Typed Prisma Query",
+        "description": "Rewrite the legacy getUser function to find a user by unique email using prisma.user.findUnique. Select id, name, and email without using raw SQL strings or \"as any\" type hacks.",
         "type": "challenge",
         "targetModel": "user",
         "activeTab": "editor",
@@ -327,11 +441,11 @@
           "Use prisma.user.findUnique",
           "Filter by where: { email }",
           "Select only id, name, and email",
-          "Do not use raw SQL strings or \"as any\""
+          "Do not use raw SQL strings or \"as any\" type assertions"
         ],
         "initialCode": "// Legacy helper previously did:\n// const res = await db.query('SELECT id, name, email FROM users WHERE email = $1', [email]);\n// return res.rows[0];\n\nexport async function getUser(email: string) {\n  // TODO: Replace with a strongly typed prisma.user.findUnique query\n  // Filter by where: { email } and select id, name, and email\n}",
         "solutionCode": "export async function getUser(email: string) {\n  return await prisma.user.findUnique({\n    where: { email },\n    select: { id: true, name: true, email: true }\n  });\n}",
-        "solutionExplanation": "findUnique is designed for fields that uniquely identify one record, such as a primary key or a field marked @unique. The select object ensures only the requested fields are returned, and TypeScript infers the exact shape { id: number; name: string; email: string } | null.",
+        "solutionExplanation": "findUnique is designed for unique lookups. The select object ensures only the requested fields are queried and returned in the resulting TypeScript object.",
         "hints": [
           {
             "level": 1,

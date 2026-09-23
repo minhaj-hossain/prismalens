@@ -1,6 +1,6 @@
 # PrismaLens 14-Day Production Curriculum Master Report
 
-**Generated At:** 2026-09-09T15:23:01.744Z  
+**Generated At:** 2026-09-23T06:59:38.744Z  
 **Curriculum Version:** 1.0.0 (Production Master)  
 **Total Milestones:** 4  
 **Total Days:** 14  
@@ -29,10 +29,10 @@ All curriculum content has been exported into formatted, standalone JSON files l
 
 | Milestone | Title & Subtitle | Days Range | Focus & Scope |
 |-----------|------------------|------------|---------------|
-| **Milestone 1** | **Foundations & Schema Modeling**<br>*From Raw SQL to Relational Schemas* | `Days 1 – 4` | Master the database problems ORMs solve, Prisma v7 setup, declarative schema design, native types, constraints, and all relational patterns (1:1, 1:N, M:N). |
-| **Milestone 2** | **Migrations, Operations & Controlled Reads**<br>*Database Evolution & Optimized Querying* | `Days 5 – 8` | Safely evolve schemas with migrations and seeders, manage connection pools and client singletons, and build precise read queries with select, include, filters, and pagination. |
-| **Milestone 3** | **Mutations, Data Integrity & Transactions**<br>*ACID Guarantees & Safe Writes* | `Days 9 – 12` | Safely accept user input with Zod, execute atomic updates and idempotent upserts, configure referential cascade actions, and master nested writes with ACID transactions. |
-| **Milestone 4** | **Production REST APIs & Resilience**<br>*Enterprise Architecture & Hardening* | `Days 13 – 14` | Intercept Prisma error codes without leaking database internals, build robust Express error middleware, and architect a complete production-grade publishing REST API. |
+| **Milestone 1** | **Foundations & Schema Modeling**<br>*From Raw SQL to Relational Schemas* | `Days 1–4` | Master the database problems ORMs solve, Prisma v7 setup, declarative schema design, native types, constraints, and all relational patterns (1:1, 1:N, M:N). |
+| **Milestone 2** | **Migrations, Operations & Controlled Reads**<br>*Database Evolution & Optimized Querying* | `Days 5–8` | Safely evolve schemas with migrations and seeders, manage connection pools and client singletons, and build precise read queries with select, include, filters, and pagination. |
+| **Milestone 3** | **Mutations, Data Integrity & Transactions**<br>*ACID Guarantees & Safe Writes* | `Days 9–12` | Safely accept user input with Zod, execute atomic updates and idempotent upserts, configure referential cascade actions, and master nested writes with ACID transactions. |
+| **Milestone 4** | **Production REST APIs & Resilience**<br>*Enterprise Architecture & Hardening* | `Days 13–14` | Intercept Prisma error codes without leaking database internals, build robust Express error middleware, and architect a complete production-grade publishing REST API. |
 
 ---
 
@@ -40,10 +40,10 @@ All curriculum content has been exported into formatted, standalone JSON files l
 
 | Day | Module Title | Est. Mins | Concepts | Tasks (Practice + Challenge) | Key Focus Area |
 |:---:|:---|:---:|:---:|:---:|:---|
-| Day 01 | **Why Prisma?** | 45m | 2 | 5 + 1 = **6** | `why-prisma` |
-| Day 02 | **Setup & CLI Tooling** | 45m | 2 | 4 + 1 = **5** | `prisma-setup-v7` |
+| Day 01 | **Why Prisma?** | 45m | 3 | 7 + 1 = **8** | `why-prisma` |
+| Day 02 | **Setup & Configuration** | 45m | 2 | 4 + 1 = **5** | `prisma-setup-v7` |
 | Day 03 | **Models & Constraints** | 50m | 2 | 4 + 1 = **5** | `models-fields-enums` |
-| Day 04 | **Relations Modeling** | 55m | 3 | 6 + 1 = **7** | `relations-modeling` |
+| Day 04 | **Relations Modeling** | 55m | 2 | 4 + 1 = **5** | `relations-modeling` |
 | Day 05 | **Migrations & Seeding** | 45m | 2 | 4 + 1 = **5** | `migrations-and-seeding` |
 | Day 06 | **Client Lifecycle** | 40m | 2 | 4 + 1 = **5** | `client-lifecycle-connections` |
 | Day 07 | **Reading Data** | 50m | 2 | 4 + 1 = **5** | `reading-data-select-include` |
@@ -64,47 +64,49 @@ All curriculum content has been exported into formatted, standalone JSON files l
 - **ID / Slug:** `day-01` (`why-prisma`)
 - **Milestone:** Milestone 1: Foundations & Schema Modeling
 - **Estimated Duration:** 45 minutes
-- **Module Overview:** See how Prisma makes database work easier to write, understand, and maintain in a TypeScript application.
+- **Module Overview:** Learn why traditional raw SQL drivers leave your TypeScript code vulnerable to silent runtime bugs, and how Prisma generates a fully type-safe, auto-completing database client directly from your schema.
 
 **Key Learning Takeaways:**
-- ✅ Understand why database data and TypeScript code do not naturally use the same types and structure
-- ✅ Understand how schema.prisma, Prisma Client, and Prisma Migrate fit together
-- ✅ Write a simple Prisma Client query and understand what it does in the database
+- ✅ Understand the Object-Relational Impedance Mismatch and why raw SQL strings are invisible to the TypeScript compiler
+- ✅ Learn how Prisma Client dynamically infers TypeScript return types directly from your query parameters
+- ✅ Use findUnique and select to fetch lean, targeted records without over-fetching database columns
+- ✅ Understand the three architectural pillars: schema.prisma, Prisma Client, and Prisma Migrate
 
-#### 🧠 Concepts (2)
+#### 🧠 Concepts (3)
 
-##### Concept 1: Why Databases and TypeScript Disagree (and How Prisma Fixes It) (`day-01-concept-1`)
-> **Overview:** Why SQL strings are invisible to TypeScript and how Prisma gives your backend a generated, strongly typed database API.
+##### Concept 1: The Type-Safety Gap: Why Raw SQL Fails TypeScript (`day-01-concept-1`)
+> **Overview:** Why raw SQL strings leave your backend blind to typos and schema changes, and how Prisma gives your database queries real compile-time guarantees.
 
-- **Theory Core:** When you query a database using SQL drivers in Node.js, SQL is treated as a plain string: db.query('SELECT id, name, email FROM users WHERE id = $1', [userId]).
+- **Theory Core:** When you query a database using raw database drivers (like pg or mysql2) in Node.js, your SQL query is treated as an opaque string:
+db.query('SELECT id, name, email FROM users WHERE id = $1', [userId])
 
-TypeScript cannot inspect or type-check the contents of an arbitrary SQL string. It sees a function call returning an untyped driver result. If a database column is renamed or removed, TypeScript cannot warn you—the mismatch is only discovered when that query runs.
+To the TypeScript compiler, that SQL string is a complete black box. TypeScript cannot parse SQL grammar, inspect column names, or verify that the "users" table even exists. The driver returns an untyped any or generic row object. If someone renames the database column from "email" to "user_email", TypeScript won't say a word—you only discover the catastrophic null pointer in production when an active user attempts to log in.
 
-Prisma solves this by generating strongly typed client methods directly from your schema.prisma file. Prisma Client uses generated types based on your schema, allowing TypeScript to catch invalid model names, misspelled fields, and incorrect argument types while you type your code. Prisma does not replace SQL; SQL remains the language executed by the database, while Prisma provides a type-checked API to work with it.
-- **Key Takeaway:** *Prisma gives your TypeScript backend a generated, strongly typed API for working with your database, while SQL remains the underlying language of the database.*
+Prisma eliminates this entire class of bugs by reversing the relationship: your schema.prisma defines your data models, and Prisma generates a dedicated, strongly typed TypeScript client tailored to your exact database. When you write prisma.user.findUnique({ where: { id } }), TypeScript knows every column, every type, and every constraint in real time.
+- **Key Takeaway:** *Prisma turns database queries from fragile, untyped strings into verified, auto-completing TypeScript operations with zero runtime surprises.*
 - **Common Pitfalls:**
-  - ⚠️ Assuming Prisma replaces SQL knowledge: Prisma generates SQL queries under the hood, and understanding database concepts remains essential.
-  - ⚠️ Using "as any" to bypass TypeScript errors instead of fixing invalid field names against the schema.
-- **Quick Check MCQ:** *"Why can Prisma catch a typo like "where: { user_mail: email }" before the code runs?"*
-  - *Correct Answer:* Option 2: "Prisma Client has generated types based on the Prisma schema"
-  - *Explanation:* Prisma generates TypeScript type definitions from your schema.prisma models, allowing TypeScript to flag any property that does not exist on the model.
+  - ⚠️ Relying on "as any" or manual type assertions: never cast Prisma query outputs to "any"; let Prisma infer the exact shape.
+  - ⚠️ Assuming Prisma replaces SQL knowledge: Prisma generates SQL, and understanding indexes, constraints, and execution plans remains essential.
+- **Quick Check MCQ:** *"Why does TypeScript fail to catch typos inside raw SQL query strings like "SELECT usr_name FROM users"?"*
+  - *Correct Answer:* Option 2: "TypeScript treats string literals as opaque text and cannot inspect SQL grammar or live database schemas"
+  - *Explanation:* To TypeScript, a raw SQL query is merely a string. It cannot know what tables or columns exist in your database without an ORM or code generator like Prisma.
 
 **Practice Tasks for Concept 1:**
 
-###### 📝 Task 1.1: Task 1 (Guided): Read and Shape a Prisma Query (`task-1-1`)
+###### 📝 Task 1.1: Task 1 (Guided): Read and Shape a Record by Primary Key (`task-1-1`)
 - **Type:** `guided` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** Inspect a Prisma query that requests specific fields with select, and complete the query to return only id and name.
+- **Description:** Use prisma.user.findUnique to fetch a single user by ID, selecting only their id and name to create an efficient, type-safe return payload.
 - **Instructions & Directives:**
   - [ ] Call prisma.user.findUnique
-  - [ ] Set where: { id: userId }
-  - [ ] Use select: { id: true, name: true } to return only id and name
+  - [ ] Pass where: { id: userId } to target the primary key
+  - [ ] Use select: { id: true, name: true } so only id and name are retrieved
 - **Prisma Validation Rule:**
   - Method: `findUnique`
   - Required Select Fields: `id, name`
   - Required Where Filters: `id`
 - **Initial Starter Code:**
 ```typescript
-// In Prisma, your query determines the shape of the returned value.
+// In Prisma, your query directly determines the shape of the returned value.
 // Complete the query to fetch user by id with only 'id' and 'name':
 export async function getUserNameOnly(userId: number) {
   return await prisma.user.findUnique({
@@ -122,15 +124,15 @@ export async function getUserNameOnly(userId: number) {
   });
 }
 ```
-- **Success Message:** *"Well done! Notice how select directly controls both the SQL columns queried and the inferred TypeScript shape."*
+- **Success Message:** *"Great job! Notice how the returned TypeScript type is strictly { id: number; name: string } | null."*
 
-###### 📝 Task 1.2: Task 2 (Guided): Write a findUnique Query by Unique Email (`task-1-2`)
+###### 📝 Task 1.2: Task 2 (Guided): Query by Unique Constraint (Email Lookup) (`task-1-2`)
 - **Type:** `guided` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** Write a type-safe findUnique query looking up a user by their unique email address, selecting id, name, and email.
+- **Description:** Look up an account by their unique email address and project their id, name, and email fields.
 - **Instructions & Directives:**
   - [ ] Call prisma.user.findUnique
-  - [ ] Pass where: { email } to filter by unique email
-  - [ ] Use select to return id, name, and email
+  - [ ] Pass where: { email } to filter by the unique email address
+  - [ ] Select id, name, and email in the response
 - **Prisma Validation Rule:**
   - Method: `findUnique`
   - Required Select Fields: `id, name, email`
@@ -151,14 +153,14 @@ export async function getUserByEmail(email: string) {
   });
 }
 ```
-- **Success Message:** *"Great work! You wrote a clean findUnique query with explicit field selection."*
+- **Success Message:** *"Clean execution! By targeting a @unique field, Prisma guarantees at most one row is returned."*
 
-###### 📝 Task 1.3: Task 3 (Independent): Fix an Invalid Field Name (Without "as any") (`task-1-3`)
+###### 📝 Task 1.3: Task 3 (Independent): Eliminate Type Bypasses ("as any") (`task-1-3`)
 - **Type:** `independent` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** A developer used "as any" to silence TypeScript on a nonexistent field user_mail. Fix the query to use the schema-defined email field without any type bypasses.
+- **Description:** A developer used "as any" to silence a compiler error caused by a misspelled field name. Fix the query to use the actual schema field "email" without hacks.
 - **Instructions & Directives:**
-  - [ ] Remove "as any" from the query argument
-  - [ ] Replace the nonexistent field user_mail with email in the where filter
+  - [ ] Remove "as any" completely from the query
+  - [ ] Replace the invalid field user_mail with the schema-defined email field
   - [ ] Select id and email in the returned record
 - **Prisma Validation Rule:**
   - Method: `findUnique`
@@ -182,31 +184,115 @@ export async function getActiveMember(email: string) {
   });
 }
 ```
-- **Success Message:** *"Awesome job! You fixed the query bug without resorting to type-silencing hacks."*
+- **Success Message:** *"Well done! You eliminated the type hack and restored genuine compile-time safety."*
 
-##### Concept 2: How Prisma Fits Together (Schema, Client & Migrate) (`day-01-concept-2`)
-> **Overview:** How schema.prisma, generated Prisma Client, and Prisma Migrate connect your TypeScript backend to your database.
+##### Concept 2: Lean Projections: Why SELECT * Hurts Production Apps (`day-01-concept-2`)
+> **Overview:** Why fetching entire database rows degrades performance, and how Prisma select shapes both network payloads and TypeScript types.
 
-- **Theory Core:** Prisma consists of three coordinated tools that work together in your application workflow:
+- **Theory Core:** When developers query database tables without specifying columns, the database defaults to SELECT * (fetching every column on the row). In a small toy app, this seems harmless. In production, it creates severe problems:
 
-1. schema.prisma — The central schema definition that describes your data models, relations, and generator settings.
-2. Prisma Client — The strongly typed query builder generated directly from your schema, which you import into your backend code to query the database.
-3. Prisma Migrate — The CLI tool that reads changes in schema.prisma, creates versioned SQL migration files, and applies them to your database.
+1. The Payload Tax: Tables often contain heavy text columns, metadata blobs, or internal audit fields. Pulling 50 columns over the network when you only need a user's name wastes memory, CPU serialization, and network bandwidth.
+2. The Security Leak: If your user table has password_hash or reset_token columns, a lazy SELECT * risks serializing sensitive secrets into public API JSON responses.
+3. Memory Pressure: In high-throughput Node.js microservices, allocating thousands of bloated row objects stresses the V8 garbage collector.
 
-Editing schema.prisma does not automatically alter your live database tables. When you change a model in schema.prisma, Prisma Migrate generates and executes the SQL DDL needed to update your database, and Prisma Client generates fresh TypeScript types so your code immediately reflects the new schema.
-- **Key Takeaway:** *schema.prisma defines your data models, Prisma Client gives your TypeScript code a typed query API, and Prisma Migrate manages changes to your database schema.*
+With Prisma, select acts as a surgical scalpel. Specifying select: { name: true, email: true } does two things simultaneously:
+- Compiles down to SELECT "name", "email" at the PostgreSQL engine level.
+- Narrows the TypeScript return type so only name and email exist on the resulting object.
+- **Key Takeaway:** *Always project fields intentionally with select to keep database queries fast, lightweight, and leak-proof.*
 - **Common Pitfalls:**
-  - ⚠️ Assuming modifying schema.prisma automatically updates live database tables without running a migration.
-  - ⚠️ Thinking generator client is the Prisma Client itself: the generator block simply configures how and where the client is generated.
-- **Quick Check MCQ:** *"What happens when you add a new field to schema.prisma?"*
-  - *Correct Answer:* Option 2: "You must run a migration to update the database, and generate Prisma Client to update TypeScript types"
-  - *Explanation:* Editing schema.prisma updates your schema definition. You then use Prisma Migrate to apply SQL changes to your database and generate Prisma Client to refresh TypeScript types.
+  - ⚠️ Mixing select and include on the same level: Prisma disallows using select and include together on the root object—use nested select instead.
+  - ⚠️ Assuming select is just a client-side filter: select translates directly into the SQL column list; unselected columns never leave the database server.
+- **Quick Check MCQ:** *"What happens in PostgreSQL when you write prisma.user.findMany({ select: { name: true } })?"*
+  - *Correct Answer:* Option 2: "PostgreSQL runs SELECT "name" FROM "users", transmitting only the name column over the network wire"
+  - *Explanation:* Prisma generates a targeted SQL query that requests only the specific column from PostgreSQL, saving network and database resources.
 
 **Practice Tasks for Concept 2:**
 
-###### 📝 Task 2.1: Task 1 (Guided): Querying with Precise Field Shape (`task-1-4`)
+###### 📝 Task 2.1: Task 1 (Guided): Query a Student Directory with Lean Projection (`task-1-4`)
+- **Type:** `guided` | **Target Model:** `student` | **Active Tab:** `editor`
+- **Description:** Retrieve all students from the database using prisma.student.findMany, selecting only the name and department columns.
+- **Instructions & Directives:**
+  - [ ] Call prisma.student.findMany
+  - [ ] Use select: { name: true, department: true }
+  - [ ] Do not fetch unused columns like id, age, or city
+- **Prisma Validation Rule:**
+  - Method: `findMany`
+  - Required Select Fields: `name, department`
+- **Initial Starter Code:**
+```typescript
+// Fetch a lightweight student directory list:
+export async function getStudentDirectory() {
+  // TODO: Call prisma.student.findMany selecting only 'name' and 'department'
+}
+```
+- **Solution Code:**
+```typescript
+export async function getStudentDirectory() {
+  return await prisma.student.findMany({
+    select: {
+      name: true,
+      department: true
+    }
+  });
+}
+```
+- **Success Message:** *"Great job! You executed a lean multi-row projection without over-fetching."*
+
+###### 📝 Task 2.2: Task 2 (Independent): Build a Safe User Profile Card (`task-1-5`)
+- **Type:** `independent` | **Target Model:** `user` | **Active Tab:** `editor`
+- **Description:** Complete the getPublicProfile function to look up a user by their unique email and project only their public name and email fields.
+- **Instructions & Directives:**
+  - [ ] Call prisma.user.findUnique with where: { email }
+  - [ ] Select only name and email in the return payload
+- **Prisma Validation Rule:**
+  - Method: `findUnique`
+  - Required Select Fields: `name, email`
+  - Required Where Filters: `email`
+- **Initial Starter Code:**
+```typescript
+export async function getPublicProfile(email: string) {
+  // TODO: Query user by email and return only 'name' and 'email'
+}
+```
+- **Solution Code:**
+```typescript
+export async function getPublicProfile(email: string) {
+  return await prisma.user.findUnique({
+    where: { email },
+    select: { name: true, email: true }
+  });
+}
+```
+- **Success Message:** *"Safe and clean! The returned payload contains strictly the public profile fields."*
+
+##### Concept 3: The Prisma Triad: Schema, Client, and Migrate (`day-01-concept-3`)
+> **Overview:** How schema.prisma, Prisma Client, and Prisma Migrate coordinate to keep your database, SQL migrations, and TypeScript types in perfect sync.
+
+- **Theory Core:** Prisma is not a monolithic library; it is a coordinated toolchain composed of three distinct parts:
+
+1. schema.prisma (The Single Source of Truth):
+   Here you declare your datasource (e.g. PostgreSQL), client generators, and data models with their relations and constraints. Everything in your application flows outward from this declarative file.
+
+2. Prisma Client (The Type-Safe Query Engine):
+   A tailor-made query builder generated into your node_modules. It provides auto-completion, compile-time validation, and query compilation. You never manually write type definitions for your database tables—Prisma generates them automatically.
+
+3. Prisma Migrate (The Database Evolution Engine):
+   A version-controlled database migration tool. When you modify a model in schema.prisma, Prisma Migrate calculates the difference, writes human-readable SQL migration scripts (e.g. ALTER TABLE), and applies them to your database.
+
+Editing schema.prisma does not magically alter live PostgreSQL tables. You run migrations to update the database, and run "prisma generate" to refresh your TypeScript types.
+- **Key Takeaway:** *schema.prisma defines your data models, Prisma Migrate updates your PostgreSQL tables with SQL DDL, and Prisma Client gives your TypeScript code a strongly typed query API.*
+- **Common Pitfalls:**
+  - ⚠️ Expecting database tables to change automatically just by saving schema.prisma without running a migration.
+  - ⚠️ Manually writing TypeScript interfaces that duplicate database models instead of utilizing Prisma-generated types.
+- **Quick Check MCQ:** *"What command synchronizes your TypeScript types after you add a new model to schema.prisma?"*
+  - *Correct Answer:* Option 2: "prisma generate"
+  - *Explanation:* Running "prisma generate" inspects schema.prisma and regenerates the Prisma Client TypeScript definitions in node_modules.
+
+**Practice Tasks for Concept 3:**
+
+###### 📝 Task 3.1: Task 1 (Guided): Query Auth Credentials with Precision (`task-1-6`)
 - **Type:** `guided` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** Write a query function to retrieve only the id and email of a user for authentication verification, observing how select restricts both the returned SQL columns and the TypeScript inferred shape.
+- **Description:** Look up an account by ID and project only the authentication credentials (id and email) for an internal token verification check.
 - **Instructions & Directives:**
   - [ ] Call prisma.user.findUnique with where: { id: userId }
   - [ ] Select only id: true and email: true
@@ -233,48 +319,49 @@ export async function getUserAuthCredentials(userId: number) {
 ```
 - **Success Message:** *"Great job! You shaped the query with select and saw how TypeScript infers only the requested fields."*
 
-###### 📝 Task 2.2: Task 2 (Independent): Retrieve Public Profile Fields (`task-1-5`)
+###### 📝 Task 3.2: Task 2 (Independent): Query with Schema-Defined Unique Constraint (`task-1-7`)
 - **Type:** `independent` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** Complete the getPublicProfile function to look up a user by their unique email and select only name and email.
+- **Description:** Demonstrate client type-safety by fetching the first user matching a verified unique constraint, returning their id, name, and email fields.
 - **Instructions & Directives:**
-  - [ ] Call prisma.user.findUnique
+  - [ ] Call prisma.user.findFirst
   - [ ] Filter by where: { email }
-  - [ ] Use select to return only name and email
+  - [ ] Select only id, name, and email
 - **Prisma Validation Rule:**
-  - Method: `findUnique`
-  - Required Select Fields: `name, email`
+  - Method: `findFirst`
+  - Required Select Fields: `id, name, email`
   - Required Where Filters: `email`
 - **Initial Starter Code:**
 ```typescript
-export async function getPublicProfile(email: string) {
-  // TODO: Query user by email and return only 'name' and 'email'
+// Fetch a single user record projecting only id, name, and email:
+export async function getVerifiedUser(email: string) {
+  // TODO: Call prisma.user.findFirst with where: { email } and select id, name, and email
 }
 ```
 - **Solution Code:**
 ```typescript
-export async function getPublicProfile(email: string) {
-  return await prisma.user.findUnique({
+export async function getVerifiedUser(email: string) {
+  return await prisma.user.findFirst({
     where: { email },
-    select: { name: true, email: true }
+    select: { id: true, name: true, email: true }
   });
 }
 ```
-- **Success Message:** *"Well done! Inferred types cleanly match your selected fields."*
+- **Success Message:** *"Great work! You fetched the verified user record with a strict projection."*
 
-#### 🏆 Day 1 Final Challenge: Day 1 Challenge: Replace a Legacy User Lookup (`day-01-challenge`)
+#### 🏆 Day 1 Final Challenge: Day 1 Challenge: The Production API Refactor (`day-01-challenge`)
 
-> **Scenario:** Your team is refactoring a legacy Express service. You need to replace an untyped raw SQL helper with a strongly typed Prisma query that retrieves a user by their unique email.
+> **Scenario:** Your backend engineering team is deprecating an old Express microservice that relied on fragile, untyped raw SQL strings. You are tasked with replacing the legacy lookup query with a type-safe Prisma query that fetches an active user by email and projects only their id, name, and email fields.
 
 **Challenge Tasks (1):**
 
-###### 🎯 Challenge Task 1: Replace Legacy User Lookup with Typed Prisma Query (`challenge-1-1`)
+###### 🎯 Challenge Task 1: Replace Legacy Raw SQL with Typed Prisma Query (`challenge-1-1`)
 - **Type:** `challenge` | **Target Model:** `user` | **Active Tab:** `editor`
-- **Description:** Rewrite the legacy getUser function to find a user by email using prisma.user.findUnique. Select only id, name, and email without using raw SQL or "as any".
+- **Description:** Rewrite the legacy getUser function to find a user by unique email using prisma.user.findUnique. Select id, name, and email without using raw SQL strings or "as any" type hacks.
 - **Instructions & Directives:**
   - [ ] Use prisma.user.findUnique
   - [ ] Filter by where: { email }
   - [ ] Select only id, name, and email
-  - [ ] Do not use raw SQL strings or "as any"
+  - [ ] Do not use raw SQL strings or "as any" type assertions
 - **Initial Starter Code:**
 ```typescript
 // Legacy helper previously did:
@@ -300,65 +387,80 @@ export async function getUser(email: string) {
 
 ---
 
-### 📅 Day 02: Modern Prisma v7 Setup & Configuration
+### 📅 Day 02: Day 2 — Modern Prisma Setup & Configuration
 
 - **ID / Slug:** `day-02` (`prisma-setup-v7`)
 - **Milestone:** Milestone 1: Foundations & Schema Modeling
 - **Estimated Duration:** 45 minutes
-- **Module Overview:** Create a working Prisma + PostgreSQL project, understand Prisma CLI tooling, manage connection pooling, and use introspection (db pull).
+- **Module Overview:** Master datasource configuration, configure connection pooling for serverless and cloud PostgreSQL, and bridge legacy SQL snake_case tables to idiomatic TypeScript camelCase using @map and @@map.
 
 **Key Learning Takeaways:**
-- ✅ Mastered essential Prisma CLI commands: init, generate, db pull, and studio
-- ✅ Configured connection pooling strings with PgBouncer query parameters
-- ✅ Mapped snake_case database tables to camelCase TypeScript models with @map and @@map
+- ✅ Understand datasource and client generator declarations in schema.prisma
+- ✅ Configure connection pooling parameters for serverless environments (PgBouncer, Neon, Supabase)
+- ✅ Map legacy snake_case database tables and columns to clean TypeScript camelCase models without altering live database tables
 
 #### 🧠 Concepts (2)
 
-##### Concept 1: Prisma CLI Commands & Lifecycle (`day-02-concept-1`)
-> **Overview:** Master npx prisma generate, db pull, and connection pooling configuration.
+##### Concept 1: Datasource Architecture & Connection Pooling in Cloud Backends (`day-02-concept-1`)
+> **Overview:** How Prisma connects to PostgreSQL, and why serverless environments require connection poolers to prevent database connection exhaustion.
 
-- **Theory Core:** Prisma CLI is your developer cockpit: "npx prisma generate" reads schema.prisma and compiles typed models into node_modules/@prisma/client. In production serverless setups, connection pooling parameters (pgbouncer=true) prevent database connection exhaustion.
-- **Key Takeaway:** *Always run npx prisma generate in your CI/CD and deployment build steps.*
-- **Quick Check MCQ:** *"When should you run "npx prisma generate"?"*
-  - *Correct Answer:* Option 2: "Every time you modify schema.prisma or install dependencies"
-  - *Explanation:* Generating the client recompiles the TypeScript definitions to reflect your latest schema changes.
+- **Theory Core:** Every Prisma application starts with the datasource block in schema.prisma. It specifies the database provider ("postgresql", "mysql", "sqlite") and the connection URL:
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+In traditional Node.js servers, a long-lived application process maintains a stable pool of 5–10 database connections. However, in modern serverless and containerized cloud platforms (like Vercel, AWS Lambda, or Cloud Run), incoming traffic can spin up hundreds of concurrent function instances simultaneously. If each function opens its own direct connection, PostgreSQL will quickly exceed its max_connections limit and crash with "FATAL: remaining connection slots are reserved".
+
+To prevent this, production deployments route traffic through a connection pooler like PgBouncer or serverless pooling proxies. Prisma supports this by appending query parameters like "?pgbouncer=true&connection_limit=10" to your connection URL.
+- **Key Takeaway:** *Always read database credentials from environment variables, and use connection pooling parameters in serverless environments.*
+- **Quick Check MCQ:** *"Why do cloud serverless backends require a connection pooler (like PgBouncer) when talking to PostgreSQL?"*
+  - *Correct Answer:* Option 2: "Each serverless function instance opens separate connections, quickly overwhelming PostgreSQL connection limits"
+  - *Explanation:* Serverless functions scale out horizontally. A connection pooler acts as a reverse proxy that multiplexes hundreds of transient function connections into a fixed pool of persistent database connections.
 
 **Practice Tasks for Concept 1:**
 
-###### 📝 Task 1.1: Task 1 (Guided): Identify Client Generation Command (`task-2-1`)
-- **Type:** `guided` | **Target Model:** `cli` | **Active Tab:** `editor`
-- **Description:** Return the exact CLI command needed to regenerate the TypeScript client after a schema modification.
+###### 📝 Task 1.1: Task 1 (Guided): Configure PostgreSQL Datasource & Generator (`task-2-1`)
+- **Type:** `guided` | **Target Model:** `datasource` | **Active Tab:** `schema`
+- **Description:** Set up the datasource db block pointing to PostgreSQL using env("DATABASE_URL") and configure the generator client in schema.prisma.
 - **Instructions & Directives:**
-  - [ ] Return the string "npx prisma generate" from getGenerateCommand()
+  - [ ] Define datasource db with provider = "postgresql" and url = env("DATABASE_URL")
+  - [ ] Define generator client with provider = "prisma-client-js"
 - **Prisma Validation Rule:**
   - Method: `any`
 - **Initial Starter Code:**
-```typescript
-// Return the exact CLI command string needed to generate client types:
-export function getGenerateCommand(): string {
-  return "";
-}
+```prisma
+// Configure datasource db and generator client:
+
 ```
 - **Solution Code:**
-```typescript
-export function getGenerateCommand(): string {
-  return "npx prisma generate";
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
 }
 ```
-- **Success Message:** *"Correct! npx prisma generate keeps your TypeScript types in sync."*
+- **Success Message:** *"Great job! Datasource and generator blocks are properly configured."*
 
 ###### 📝 Task 1.2: Task 2 (Independent): Append Connection Pooling Parameters (`task-2-2`)
 - **Type:** `independent` | **Target Model:** `url` | **Active Tab:** `editor`
-- **Description:** Append required parameters (?pgbouncer=true&connection_limit=10) to a PostgreSQL URL.
+- **Description:** Write a helper function to safely append required serverless pool parameters (pgbouncer=true and connection_limit=10) to a PostgreSQL URL.
 - **Instructions & Directives:**
-  - [ ] Parse or manipulate basePostgresUrl
-  - [ ] Ensure pgbouncer=true and connection_limit=10 are set as query params
+  - [ ] Use the standard URL object to parse basePostgresUrl
+  - [ ] Set search parameter pgbouncer to "true"
+  - [ ] Set search parameter connection_limit to "10"
+  - [ ] Return the updated URL string
 - **Prisma Validation Rule:**
   - Method: `any`
 - **Initial Starter Code:**
 ```typescript
 export function formatPooledDbUrl(basePostgresUrl: string): string {
-  // Append required query parameters for connection pooling (pgbouncer=true, connection_limit=10)
+  // TODO: Append pgbouncer=true and connection_limit=10 to the URL safely
   return basePostgresUrl;
 }
 ```
@@ -371,34 +473,44 @@ export function formatPooledDbUrl(basePostgresUrl: string): string {
   return url.toString();
 }
 ```
-- **Success Message:** *"Great job! Connection pooling prevents database pool exhaustion."*
+- **Success Message:** *"Well done! Connection pooling parameters ensure reliable database connectivity in high-concurrency environments."*
 
-##### Concept 2: Database Introspection & Field Mapping (@map, @@map) (`day-02-concept-2`)
-> **Overview:** Keep TypeScript idiomatic in camelCase while retaining legacy snake_case in PostgreSQL.
+##### Concept 2: The Naming Bridge: Mapping snake_case SQL to camelCase TypeScript (`day-02-concept-2`)
+> **Overview:** How to use @map and @@map to write clean, idiomatic TypeScript while preserving legacy database table and column names.
 
-- **Theory Core:** In relational databases, column names frequently use snake_case (e.g. user_accounts, created_at). In TypeScript, idiomatic code uses camelCase. Prisma bridges this with @map("column_name") on fields and @@map("table_name") on models.
-- **Key Takeaway:** *Never compromise TypeScript conventions for SQL naming rules; use @map and @@map.*
-- **Quick Check MCQ:** *"What is the difference between @map and @@map in Prisma?"*
-  - *Correct Answer:* Option 2: "@map maps individual field/column names; @@map maps entire model/table names"
-  - *Explanation:* Single @ applies to the field directly above it; double @@ applies to the entire model block.
+- **Theory Core:** In relational database design, table and column names almost universally adhere to snake_case conventions:
+- Tables: tbl_customers, user_audit_logs, order_items
+- Columns: first_name, is_email_verified, created_at
+
+However, in TypeScript, writing user.first_name or user.is_email_verified violates idiomatic conventions (camelCase for properties, PascalCase for classes and models). Forcing your TypeScript codebase to adopt database snake_case feels clumsy.
+
+Prisma solves this dilemma with two mapping attributes:
+- @map("column_name"): Applied directly to a field. In your TypeScript code, you write user.firstName, but Prisma sends queries to the underlying "first_name" column in SQL.
+- @@map("table_name"): Applied at the bottom of a model block. In TypeScript, you write prisma.customer.findMany(), while Prisma targets the "tbl_customers" table in PostgreSQL.
+
+Neither attribute alters your database schema. They act as a compile-time translation bridge.
+- **Key Takeaway:** *Use @map for columns and @@map for tables to keep your TypeScript codebase idiomatic without altering database table schemas.*
+- **Quick Check MCQ:** *"What is the exact distinction between @map and @@map in Prisma?"*
+  - *Correct Answer:* Option 2: "@map maps an individual column name; @@map maps an entire table name"
+  - *Explanation:* A single @ directive operates on the field directly preceding it, whereas a double @@ directive operates on the entire model block.
 
 **Practice Tasks for Concept 2:**
 
-###### 📝 Task 2.1: Task 1 (Guided): Map Legacy Customer Table and Columns (`task-2-3`)
+###### 📝 Task 2.1: Task 1 (Guided): Map Customer Model and Email Column (`task-2-3`)
 - **Type:** `guided` | **Target Model:** `Customer` | **Active Tab:** `schema`
-- **Description:** Map model Customer to legacy table "tbl_customers" and field email to "cust_email".
+- **Description:** Map model Customer to legacy table "tbl_customers" and field email to column "cust_email" in schema.prisma.
 - **Instructions & Directives:**
   - [ ] Add @map("cust_email") to field email
-  - [ ] Add @@map("tbl_customers") to model Customer
+  - [ ] Add @@map("tbl_customers") at the bottom of model Customer
 - **Prisma Validation Rule:**
   - Method: `any`
 - **Initial Starter Code:**
 ```prisma
 model Customer {
   id    Int    @id @default(autoincrement())
-  email String // Map this to "cust_email"
+  email String
 
-  // Map this model to "tbl_customers"
+  // Add @@map for tbl_customers
 }
 ```
 - **Solution Code:**
@@ -410,11 +522,11 @@ model Customer {
   @@map("tbl_customers")
 }
 ```
-- **Success Message:** *"Awesome! Clean TypeScript camelCase mapped to legacy database snake_case."*
+- **Success Message:** *"Great job! Clean TypeScript camelCase mapped to legacy database snake_case."*
 
 ###### 📝 Task 2.2: Task 2 (Independent): Map Phone & Registered Date Columns (`task-2-4`)
 - **Type:** `independent` | **Target Model:** `Customer` | **Active Tab:** `schema`
-- **Description:** Add snake_case mappings for phoneNumber -> phone_number and registeredAt -> registered_at.
+- **Description:** Add snake_case mappings for phoneNumber -> phone_number and registeredAt -> registered_at on model Customer.
 - **Instructions & Directives:**
   - [ ] Map phoneNumber to "phone_number"
   - [ ] Map registeredAt to "registered_at"
@@ -442,17 +554,17 @@ model Customer {
 ```
 - **Success Message:** *"Well done! All fields mapped successfully."*
 
-#### 🏆 Day 2 Final Challenge: Day 2 Final Challenge: Legacy DB Migration Setup (`day-02-challenge`)
+#### 🏆 Day 2 Final Challenge: Day 2 Challenge: Modernize an Introspected Auth Schema (`day-02-challenge`)
 
-> **Scenario:** Take an introspected database schema with raw table names (auth_users, sys_logs), rename models into PascalCase TypeScript entities, and apply mappings.
+> **Scenario:** Your engineering team used "prisma db pull" to introspect an existing legacy PostgreSQL database. The generated model uses raw snake_case table and column names. Clean up the AuthUser model so developers use clean camelCase properties while the database keeps its exact snake_case columns intact.
 
 **Challenge Tasks (1):**
 
-###### 🎯 Challenge Task 1: Step 1: Map Auth User Model (`challenge-2-1`)
+###### 🎯 Challenge Task 1: Map AuthUser Model and Columns (`challenge-2-1`)
 - **Type:** `challenge` | **Target Model:** `AuthUser` | **Active Tab:** `schema`
 - **Description:** Map model AuthUser to "auth_users" and field passwordHash to "password_hash".
 - **Instructions & Directives:**
-  - [ ] Define model AuthUser with id Int @id
+  - [ ] Define model AuthUser with id Int @id @default(autoincrement())
   - [ ] Map passwordHash String to "password_hash"
   - [ ] Map model to "auth_users"
 - **Initial Starter Code:**
@@ -473,39 +585,49 @@ model AuthUser {
   @@map("auth_users")
 }
 ```
-- **Success Message:** *"AuthUser mapped successfully!"*
+- **Success Message:** *"AuthUser model and columns mapped successfully!"*
 
 
 ---
 
-### 📅 Day 03: Models, Fields, Enums & Constraints
+### 📅 Day 03: Day 3 — Models, Fields, Enums & Constraints
 
 - **ID / Slug:** `day-03` (`models-fields-enums`)
 - **Milestone:** Milestone 1: Foundations & Schema Modeling
 - **Estimated Duration:** 50 minutes
-- **Module Overview:** Design proper database schemas with primary keys, optional fields, native database types, enums, composite unique constraints, and indexes.
+- **Module Overview:** Design production-grade database schemas: choose appropriate scalar types, handle financial precision with Decimal, enforce valid domain values with Enums, and guarantee integrity with composite unique constraints.
 
 **Key Learning Takeaways:**
-- ✅ Configured scalar types, optional fields (?), and automated timestamps (@updatedAt)
-- ✅ Defined type-safe database enums with default values
-- ✅ Created composite primary keys (@@id) and composite unique constraints (@@unique)
+- ✅ Understand why JavaScript floating-point numbers break financial math and why Prisma Decimal is required
+- ✅ Model optional fields (?) vs required fields and use @updatedAt for automated audit timestamps
+- ✅ Declare native PostgreSQL Enums and configure default values
+- ✅ Enforce multi-column uniqueness using composite constraints like @@unique([studentId, courseId])
 
 #### 🧠 Concepts (2)
 
-##### Concept 1: Scalar Types, Optionality & Primary Keys (`day-03-concept-1`)
-> **Overview:** Master String, Int, Decimal, Boolean, DateTime, @id, cuid(), and @updatedAt.
+##### Concept 1: Scalar Types, Nullability & The Precision Problem (`day-03-concept-1`)
+> **Overview:** Why floating-point numbers corrupt financial data, how cuid() provides distributed IDs, and how nullability works in schema.prisma.
 
-- **Theory Core:** Prisma scalar fields map to SQL columns. Fields are non-nullable by default unless marked with ?. Primary keys are designated with @id (autoincrement, cuid, or uuid). @updatedAt automatically writes timestamps upon every update.
-- **Key Takeaway:** *Always use Decimal for money and currency calculations; never use Float.*
-- **Quick Check MCQ:** *"Which type should you always choose for prices and monetary amounts in Prisma?"*
-  - *Correct Answer:* Option 2: "Decimal"
-  - *Explanation:* Decimal prevents floating-point inaccuracies and maps to SQL DECIMAL(precision, scale).
+- **Theory Core:** In TypeScript and JavaScript, all standard numbers are 64-bit binary floating-point numbers (IEEE 754). This creates subtle calculation errors:
+0.1 + 0.2 // equals 0.30000000000000004!
+
+If you use Float to store prices, account balances, or financial transactions, rounding errors will eventually corrupt your accounting ledger. Prisma provides Decimal to represent arbitrary-precision fixed-point numbers mapped directly to PostgreSQL's native DECIMAL/NUMERIC types.
+
+Beyond scalar types, schema.prisma enforces strict nullability:
+- title String: Stored as NOT NULL in SQL. TypeScript infers string.
+- description String?: Stored as NULL in SQL. TypeScript infers string | null.
+
+For identifiers, autoincrementing integers (1, 2, 3...) are predictable and expose your database record count. Modern distributed systems frequently use cuid() or uuid() to generate collision-resistant string IDs on the client or server without roundtrips.
+- **Key Takeaway:** *Use Decimal for financial values to prevent rounding inaccuracies, and use ? to indicate nullable fields.*
+- **Quick Check MCQ:** *"Why should you choose Decimal instead of Float for storing monetary amounts in Prisma?"*
+  - *Correct Answer:* Option 2: "Float suffers from binary floating-point rounding inaccuracies (e.g. 0.1 + 0.2 !== 0.3), while Decimal provides exact precision"
+  - *Explanation:* Decimal maps to SQL NUMERIC/DECIMAL, preserving exact precision for currency and financial calculations.
 
 **Practice Tasks for Concept 1:**
 
 ###### 📝 Task 1.1: Task 1 (Guided): Create Product Model with Precision Types (`task-3-1`)
 - **Type:** `guided` | **Target Model:** `Product` | **Active Tab:** `schema`
-- **Description:** Create a Product model with cuid() id, required title, optional description, Decimal price, and timestamps.
+- **Description:** Create a Product model with a cuid() id, required title, optional description (String?), Decimal price, and automated timestamps.
 - **Instructions & Directives:**
   - [ ] Model Product with id String @id @default(cuid())
   - [ ] title String
@@ -515,10 +637,9 @@ model AuthUser {
   - [ ] updatedAt DateTime @updatedAt
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, title, price, createdAt, updatedAt`
 - **Initial Starter Code:**
 ```prisma
-// Define the Product model here:
+// Define the Product model:
 
 ```
 - **Solution Code:**
@@ -532,7 +653,7 @@ model Product {
   updatedAt   DateTime @updatedAt
 }
 ```
-- **Success Message:** *"Great job! Model Product matches production standards."*
+- **Success Message:** *"Great job! Model Product matches modern schema standards."*
 
 ###### 📝 Task 1.2: Task 2 (Independent): Create Article Model with Unique Slug (`task-3-2`)
 - **Type:** `independent` | **Target Model:** `Article` | **Active Tab:** `schema`
@@ -545,7 +666,6 @@ model Product {
   - [ ] createdAt DateTime @default(now())
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, slug, title, isPublished, createdAt`
 - **Initial Starter Code:**
 ```prisma
 // Define the Article model:
@@ -563,14 +683,30 @@ model Article {
 ```
 - **Success Message:** *"Well done! Model Article defined with unique constraint."*
 
-##### Concept 2: Enums & Multi-Field Constraints (@@unique, @@index) (`day-03-concept-2`)
-> **Overview:** Enforce valid domain states with Enums and composite multi-column uniqueness with @@unique.
+##### Concept 2: Enforcing Invariants: Enums & Multi-Field Constraints (`day-03-concept-2`)
+> **Overview:** How Enums eliminate arbitrary string bugs, and how composite constraints (@@unique, @@id) prevent duplicate data in relational tables.
 
-- **Theory Core:** Enums restrict column values to a predefined list in the database. Multi-column composite constraints (@@unique([userId, orgId])) guarantee that combinations of columns remain unique together.
-- **Key Takeaway:** *Use composite constraints to prevent duplicate enrollments, favorites, or memberships.*
-- **Quick Check MCQ:** *"When should you use @@unique([studentId, courseId])?"*
-  - *Correct Answer:* Option 2: "When a student cannot enroll in the same course more than once"
-  - *Explanation:* Composite unique ensures the combination of (studentId, courseId) is distinct.
+- **Theory Core:** Storing status values as raw strings (e.g. status String) is an anti-pattern. A typo like "pendng" or "canclled" will bypass TypeScript if passed dynamically and corrupt database state.
+
+Prisma solves this with Enums:
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+Prisma creates a native PostgreSQL ENUM type. At the database engine level, PostgreSQL rejects any value not in the enum list, storing the value as a compact 4-byte internal identifier.
+
+Furthermore, many domain rules require multi-column uniqueness. For example, a student can enroll in multiple courses, and a course has many students. But a student must never be allowed to enroll in the same course twice! Placing @unique on studentId prevents multiple courses; placing @unique on courseId limits the course to one student. The correct solution is a composite unique constraint:
+@@unique([studentId, courseId])
+
+This tells PostgreSQL: allow multiple occurrences of studentId and courseId, but the combination of both must remain strictly unique.
+- **Key Takeaway:** *Use Enums to prevent invalid status strings, and use composite constraints to prevent duplicate enrollments, favorites, or memberships.*
+- **Quick Check MCQ:** *"When should you declare @@unique([studentId, courseId]) instead of putting @unique on studentId?"*
+  - *Correct Answer:* Option 2: "When students can enroll in multiple courses, but must not be enrolled in the exact same course twice"
+  - *Explanation:* A composite unique constraint guarantees that the pair (studentId, courseId) is unique, preventing duplicate enrollments while allowing students to take multiple courses.
 
 **Practice Tasks for Concept 2:**
 
@@ -579,10 +715,9 @@ model Article {
 - **Description:** Define enum OrderStatus with PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED, and attach it to model Order.
 - **Instructions & Directives:**
   - [ ] Define enum OrderStatus with the 5 statuses
-  - [ ] Model Order with id Int @id, status OrderStatus @default(PENDING), and total Decimal
+  - [ ] Model Order with id Int @id @default(autoincrement()), status OrderStatus @default(PENDING), and total Decimal
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, status, total`
 - **Initial Starter Code:**
 ```prisma
 // Define enum OrderStatus and model Order:
@@ -604,7 +739,7 @@ model Order {
   total  Decimal
 }
 ```
-- **Success Message:** *"Great work! OrderStatus enum provides robust domain constraint."*
+- **Success Message:** *"Great work! OrderStatus enum provides robust domain constraints."*
 
 ###### 📝 Task 2.2: Task 2 (Independent): Add Composite Unique Constraint to Enrollment (`task-3-4`)
 - **Type:** `independent` | **Target Model:** `CourseEnrollment` | **Active Tab:** `schema`
@@ -634,32 +769,33 @@ model CourseEnrollment {
   @@unique([studentId, courseId])
 }
 ```
-- **Success Message:** *"Excellent! Duplicate enrollments are physically blocked at the database level."*
+- **Success Message:** *"Excellent! Duplicate enrollments are prevented at the database level."*
 
-#### 🏆 Day 3 Final Challenge: Day 3 Final Challenge: Complete E-Commerce Schema Blueprint (`day-03-challenge`)
+#### 🏆 Day 3 Final Challenge: Day 3 Challenge: Design an E-Commerce Favorites System (`day-03-challenge`)
 
-> **Scenario:** Design the full schema for DigitalGoodsStore with User (cuid, unique email, role), Product (Decimal price), and UserFavorite (composite primary key).
+> **Scenario:** Your e-commerce platform needs a favorites system where users can favorite products. A user can favorite multiple products, and a product can be favorited by multiple users. Design a UserFavorite join model with composite primary key @@id([userId, productId]).
 
 **Challenge Tasks (1):**
 
-###### 🎯 Challenge Task 1: Step 1: Define UserFavorite Composite Model (`challenge-3-1`)
+###### 🎯 Challenge Task 1: Design UserFavorite Composite Model (`challenge-3-1`)
 - **Type:** `challenge` | **Target Model:** `UserFavorite` | **Active Tab:** `schema`
-- **Description:** Model UserFavorite with userId String, productId String, and @@id([userId, productId]).
+- **Description:** Create model UserFavorite with userId Int, productId Int, favoritedAt DateTime @default(now()), and composite primary key @@id([userId, productId]).
 - **Instructions & Directives:**
   - [ ] Define model UserFavorite
-  - [ ] Fields: userId String, productId String, createdAt DateTime @default(now())
+  - [ ] Add userId Int and productId Int
+  - [ ] Add favoritedAt DateTime @default(now())
   - [ ] Add @@id([userId, productId])
 - **Initial Starter Code:**
 ```prisma
-// Define UserFavorite model with composite primary key:
+// Define model UserFavorite with composite primary key:
 
 ```
 - **Solution Code:**
 ```prisma
 model UserFavorite {
-  userId    String
-  productId String
-  createdAt DateTime @default(now())
+  userId      Int
+  productId   Int
+  favoritedAt DateTime @default(now())
 
   @@id([userId, productId])
 }
@@ -669,40 +805,51 @@ model UserFavorite {
 
 ---
 
-### 📅 Day 04: Relations (1-to-1, 1-to-Many, Many-to-Many)
+### 📅 Day 04: Day 4 — Relational Schema Modeling (1:1, 1:N, M:N)
 
 - **ID / Slug:** `day-04` (`relations-modeling`)
 - **Milestone:** Milestone 1: Foundations & Schema Modeling
 - **Estimated Duration:** 55 minutes
-- **Module Overview:** Model real-world relationships in Prisma schemas, understand foreign keys, @relation attributes, and implicit vs explicit join tables.
+- **Module Overview:** Master relational modeling in Prisma: understand how foreign keys connect tables, why scalar fields differ from relation fields, enforce 1:1 uniqueness, and model explicit many-to-many join tables.
 
 **Key Learning Takeaways:**
-- ✅ Mastered 1-to-Many relations: foreign key scalar field (authorId Int) vs relation field (author User)
-- ✅ Understood 1-to-1 relations and why @unique on foreign key turns 1:N into 1:1
-- ✅ Distinguished implicit M:N vs explicit M:N join tables with custom relationship attributes
+- ✅ Differentiate physical foreign key columns (authorId Int) from virtual TypeScript relation fields (author User)
+- ✅ Understand why 1-to-1 relations require @unique on the foreign key to avoid accidentally creating a 1-to-Many relation
+- ✅ Model optional relations using nullable foreign keys (Int?)
+- ✅ Compare Prisma implicit many-to-many relations with explicit join models
 
-#### 🧠 Concepts (3)
+#### 🧠 Concepts (2)
 
-##### Concept 1: One-to-Many (1:N) Relations (`day-04-concept-1`)
-> **Overview:** The fundamental relational pattern: parent holds array, child holds foreign key.
+##### Concept 1: One-to-Many (1:N): Scalar Columns vs Virtual Relation Fields (`day-04-concept-1`)
+> **Overview:** How foreign keys link tables, and why Prisma cleanly separates the SQL column from the TypeScript navigation property.
 
-- **Theory Core:** In a 1:N relationship (e.g. User has many Posts), the child table (Post) holds the foreign key scalar field (authorId Int) and the virtual relation field (author User @relation(fields: [authorId], references: [id])).
-- **Key Takeaway:** *In Prisma 1:N relations, the model that holds the foreign key must define @relation(fields: [...], references: [...]).*
-- **Quick Check MCQ:** *"Which model holds the foreign key column in a 1-to-Many relationship between Author and Book?"*
+- **Theory Core:** In relational databases, relationships are formed using Foreign Keys. In a One-to-Many (1:N) relationship (e.g. an Author has many Books), the foreign key column always lives on the "Many" table (Book).
+
+Prisma introduces a clean architectural distinction that avoids confusion:
+1. The Scalar Field (authorId Int):
+   This is the actual, physical integer column stored in your PostgreSQL table.
+2. The Relation Field (author Author @relation(...)):
+   This field does NOT exist as a column in PostgreSQL! It is a virtual navigation property used exclusively in TypeScript to navigate relations and perform typed joins with include or select.
+
+The @relation attribute binds the virtual field to the physical foreign key:
+@relation(fields: [authorId], references: [id])
+- fields: [authorId] points to the scalar column on this model.
+- references: [id] points to the target primary key on the referenced model.
+- **Key Takeaway:** *In Prisma 1:N relations, the model that holds the foreign key defines @relation(fields: [...], references: [...]).*
+- **Quick Check MCQ:** *"In a 1-to-Many relationship between Author and Book, which model holds the actual database foreign key column?"*
   - *Correct Answer:* Option 2: "Book holds authorId"
-  - *Explanation:* The "Many" side (Book) holds the foreign key pointing back to the "One" side (Author).
+  - *Explanation:* The "Many" side (Book) holds the foreign key scalar column pointing back to the primary key of Author.
 
 **Practice Tasks for Concept 1:**
 
 ###### 📝 Task 1.1: Task 1 (Guided): Connect Author and Book (1:N) (`task-4-1`)
 - **Type:** `guided` | **Target Model:** `Book` | **Active Tab:** `schema`
-- **Description:** Add foreign key authorId and relation field author to model Book.
+- **Description:** Add foreign key authorId and relation field author to model Book referencing Author.id.
 - **Instructions & Directives:**
   - [ ] In model Book, add authorId Int
   - [ ] Add author Author @relation(fields: [authorId], references: [id])
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, title, authorId`
 - **Initial Starter Code:**
 ```prisma
 model Author {
@@ -736,13 +883,12 @@ model Book {
 
 ###### 📝 Task 1.2: Task 2 (Independent): Optional 1:N Relation (Company & Employee) (`task-4-2`)
 - **Type:** `independent` | **Target Model:** `Employee` | **Active Tab:** `schema`
-- **Description:** Model 1-to-Many relation where companyId is optional (Int?) allowing unassigned employees.
+- **Description:** Model a 1-to-Many relation where companyId is optional (Int?) allowing unassigned employees.
 - **Instructions & Directives:**
   - [ ] In model Employee, add companyId Int?
   - [ ] Add company Company? @relation(fields: [companyId], references: [id])
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, name, companyId`
 - **Initial Starter Code:**
 ```prisma
 model Company {
@@ -774,14 +920,23 @@ model Employee {
 ```
 - **Success Message:** *"Well done! Optional foreign keys correctly configured."*
 
-##### Concept 2: One-to-One (1:1) Relations (`day-04-concept-2`)
-> **Overview:** The foreign key in a 1:1 relation MUST be unique to guarantee exclusivity.
+##### Concept 2: One-to-One (1:1): The @unique Mandate (`day-04-concept-2`)
+> **Overview:** Why omitting @unique on a foreign key accidentally creates a 1:Many relation, and how 1:1 relations enforce strict pairing.
 
-- **Theory Core:** A 1:1 relationship links one entity to at most one other entity (e.g. User and Profile). Syntactically, it is identical to 1:N, with ONE vital requirement: the foreign key MUST have @unique.
+- **Theory Core:** A One-to-One (1:1) relationship links exactly one record to at most one other record (such as a User and their private Profile, or a Driver and their License).
+
+Syntactically, a 1:1 relation looks almost identical to a 1:N relation. There is only one critical difference:
+The foreign key scalar field MUST have the @unique constraint!
+
+Why is @unique mandatory?
+If userId Int does NOT have @unique, nothing stops multiple Profile records from pointing to the same User #1. That would be a One-to-Many relationship. By placing @unique on userId:
+userId Int @unique
+
+PostgreSQL enforces that no two Profile rows can ever have the same userId, guaranteeing a strict 1:1 pairing. If you omit @unique, Prisma schema validation will halt with a compile error.
 - **Key Takeaway:** *Always place @unique on the foreign key field in a 1:1 relationship.*
-- **Quick Check MCQ:** *"What happens if you omit @unique on the foreign key of a 1:1 relation?"*
-  - *Correct Answer:* Option 2: "Prisma schema validation throws an error because the relation is ambiguous"
-  - *Explanation:* Prisma compiler throws: "A one-to-one relation must have a unique constraint on the foreign key".
+- **Quick Check MCQ:** *"What happens if you omit @unique on the foreign key field of a 1:1 relation in Prisma?"*
+  - *Correct Answer:* Option 2: "Prisma schema validation flags an error because without @unique the relation is a 1-to-Many"
+  - *Explanation:* Prisma validation requires @unique on the foreign key of a 1:1 relation because without a unique constraint, PostgreSQL would permit multiple child records pointing to the same parent.
 
 **Practice Tasks for Concept 2:**
 
@@ -793,7 +948,6 @@ model Employee {
   - [ ] Add account Account @relation(fields: [accountId], references: [id])
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, darkMode, accountId`
 - **Initial Starter Code:**
 ```prisma
 model Account {
@@ -823,16 +977,15 @@ model AccountSettings {
   account   Account @relation(fields: [accountId], references: [id])
 }
 ```
-- **Success Message:** *"Awesome! 1:1 relationship successfully modeled."*
+- **Success Message:** *"Great job! 1:1 relationship successfully modeled."*
 
 ###### 📝 Task 2.2: Task 2 (Independent): Fix 1:1 Unique Constraint Bug (`task-4-4`)
 - **Type:** `independent` | **Target Model:** `License` | **Active Tab:** `schema`
-- **Description:** Fix a schema error where omitting @unique caused Prisma compiler failure.
+- **Description:** Fix a schema issue where omitting @unique caused relation validation failure.
 - **Instructions & Directives:**
   - [ ] Add @unique to driverId in model License
 - **Prisma Validation Rule:**
   - Method: `any`
-  - Required Select Fields: `id, number, driverId`
 - **Initial Starter Code:**
 ```prisma
 model Driver {
@@ -843,7 +996,7 @@ model Driver {
 model License {
   id       Int    @id @default(autoincrement())
   number   String @unique
-  driverId Int    // BUG: Missing @unique!
+  driverId Int
   driver   Driver @relation(fields: [driverId], references: [id])
 }
 ```
@@ -861,146 +1014,53 @@ model License {
   driver   Driver @relation(fields: [driverId], references: [id])
 }
 ```
-- **Success Message:** *"Great fix! Driver to License is now a valid 1:1 relation."*
+- **Success Message:** *"Fixed! Adding @unique satisfies the 1:1 relation requirement."*
 
-##### Concept 3: Many-to-Many (M:N) Relations (Implicit vs Explicit) (`day-04-concept-3`)
-> **Overview:** Choose between Prisma-managed implicit join tables and explicit models with extra metadata.
+#### 🏆 Day 4 Final Challenge: Day 4 Challenge: Model a Hospital Doctor-Patient Relational Graph (`day-04-challenge`)
 
-- **Theory Core:** In implicit M:N relations (Post[] and Tag[]), Prisma manages a hidden join table automatically. When the relationship needs its own data (e.g. assignedAt, role, grade), use an explicit join model with @@id([a, b]).
-- **Key Takeaway:** *If the relationship has attributes of its own, use an explicit join model.*
-- **Quick Check MCQ:** *"When MUST you use an explicit Many-to-Many relation instead of an implicit one?"*
-  - *Correct Answer:* Option 2: "When the relationship itself needs to store additional data (e.g. assignedDate, quantity)"
-  - *Explanation:* Implicit join tables cannot store extra columns. You must create an explicit join model to hold relation fields.
-
-**Practice Tasks for Concept 3:**
-
-###### 📝 Task 3.1: Task 1 (Guided): Define Implicit M:N Relation (Post & Category) (`task-4-5`)
-- **Type:** `guided` | **Target Model:** `Post` | **Active Tab:** `schema`
-- **Description:** Define an implicit M:N relation between Post and Category by placing array relation fields on both models.
-- **Instructions & Directives:**
-  - [ ] In model Post, add categories Category[]
-  - [ ] In model Category, add posts Post[]
-- **Prisma Validation Rule:**
-  - Method: `any`
-- **Initial Starter Code:**
-```prisma
-model Post {
-  id Int @id @default(autoincrement())
-  // Add categories relation
-}
-
-model Category {
-  id Int @id @default(autoincrement())
-  // Add posts relation
-}
-```
-- **Solution Code:**
-```prisma
-model Post {
-  id         Int        @id @default(autoincrement())
-  categories Category[]
-}
-
-model Category {
-  id    Int    @id @default(autoincrement())
-  posts Post[]
-}
-```
-- **Success Message:** *"Implicit M:N relation defined!"*
-
-###### 📝 Task 3.2: Task 2 (Independent): Explicit M:N Join Model with Grade (`task-4-6`)
-- **Type:** `independent` | **Target Model:** `ClassEnrollment` | **Active Tab:** `schema`
-- **Description:** Define an explicit M:N relation between Student and ClassRoom via join model ClassEnrollment with grade Decimal?.
-- **Instructions & Directives:**
-  - [ ] Define model ClassEnrollment with studentId Int, classRoomId Int, grade Decimal?
-  - [ ] Add relations to Student and ClassRoom
-  - [ ] Add composite primary key @@id([studentId, classRoomId])
-- **Prisma Validation Rule:**
-  - Method: `any`
-  - Required Select Fields: `studentId, classRoomId`
-- **Initial Starter Code:**
-```prisma
-model Student {
-  id          Int               @id @default(autoincrement())
-  name        String
-  enrollments ClassEnrollment[]
-}
-
-model ClassRoom {
-  id          Int               @id @default(autoincrement())
-  roomNumber  String
-  enrollments ClassEnrollment[]
-}
-
-// Define model ClassEnrollment with studentId, classRoomId, grade, and @@id:
-
-```
-- **Solution Code:**
-```prisma
-model Student {
-  id          Int               @id @default(autoincrement())
-  name        String
-  enrollments ClassEnrollment[]
-}
-
-model ClassRoom {
-  id          Int               @id @default(autoincrement())
-  roomNumber  String
-  enrollments ClassEnrollment[]
-}
-
-model ClassEnrollment {
-  studentId   Int
-  classRoomId Int
-  grade       Decimal?
-  student     Student   @relation(fields: [studentId], references: [id])
-  classRoom   ClassRoom @relation(fields: [classRoomId], references: [id])
-
-  @@id([studentId, classRoomId])
-}
-```
-- **Success Message:** *"Masterful! Explicit M:N join model accurately crafted."*
-
-#### 🏆 Day 4 Final Challenge: Day 4 Final Challenge: Social Network Relational Core (`day-04-challenge`)
-
-> **Scenario:** Build the complete relational schema for a social network: User to Profile (1:1), User to Post (1:N), and Post to Comment (1:N).
+> **Scenario:** A healthcare SaaS platform needs relational models for Doctor and Appointment. A Doctor has many Appointments, and an Appointment belongs to exactly one Doctor. Model this 1-to-Many relationship with proper foreign keys.
 
 **Challenge Tasks (1):**
 
-###### 🎯 Challenge Task 1: Step 1: Wire Up Post and Comment Relation (`challenge-4-1`)
-- **Type:** `challenge` | **Target Model:** `Comment` | **Active Tab:** `schema`
-- **Description:** Add postId Int and post relation to Comment referencing Post.id.
+###### 🎯 Challenge Task 1: Model Doctor-Appointment 1:N Relationship (`challenge-4-1`)
+- **Type:** `challenge` | **Target Model:** `Appointment` | **Active Tab:** `schema`
+- **Description:** In model Appointment, add doctorId Int and doctor relation referencing Doctor.id. In model Doctor, add appointments Appointment[].
 - **Instructions & Directives:**
-  - [ ] In model Comment, add postId Int
-  - [ ] Add post Post @relation(fields: [postId], references: [id])
+  - [ ] In model Doctor, add appointments Appointment[]
+  - [ ] In model Appointment, add doctorId Int
+  - [ ] In model Appointment, add doctor Doctor @relation(fields: [doctorId], references: [id])
 - **Initial Starter Code:**
 ```prisma
-model Post {
-  id       Int       @id @default(autoincrement())
-  comments Comment[]
+model Doctor {
+  id           Int    @id @default(autoincrement())
+  name         String
+  specialty    String
+  // Add appointments relation
 }
 
-model Comment {
-  id      Int    @id @default(autoincrement())
-  content String
-  // Add relation to Post
+model Appointment {
+  id          Int      @id @default(autoincrement())
+  scheduledAt DateTime
+  // Add doctorId and doctor relation
 }
 ```
 - **Solution Code:**
 ```prisma
-model Post {
-  id       Int       @id @default(autoincrement())
-  comments Comment[]
+model Doctor {
+  id           Int           @id @default(autoincrement())
+  name         String
+  specialty    String
+  appointments Appointment[]
 }
 
-model Comment {
-  id      Int    @id @default(autoincrement())
-  content String
-  postId  Int
-  post    Post   @relation(fields: [postId], references: [id])
+model Appointment {
+  id          Int      @id @default(autoincrement())
+  scheduledAt DateTime
+  doctorId    Int
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
 }
 ```
-- **Success Message:** *"Day 4 challenge complete! Relational core wired up."*
+- **Success Message:** *"Outstanding! Doctor-Appointment relational model is production-ready."*
 
 
 ---

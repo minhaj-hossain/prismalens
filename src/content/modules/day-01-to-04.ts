@@ -457,6 +457,41 @@ export async function getUserAuthCredentials(userId: number) {
               requiredFieldsInSelect: ['id', 'email']
             },
             successMessage: 'Great job! You shaped the query with select and saw how TypeScript infers only the requested fields.'
+          },
+          {
+            id: 'task-1-7',
+            title: 'Task 2 (Independent): Query with Schema-Defined Unique Constraint',
+            description: 'Demonstrate client type-safety by fetching the first user matching a verified unique constraint, returning their id, name, and email fields.',
+            type: 'independent',
+            targetModel: 'user',
+            activeTab: 'editor',
+            instructions: [
+              'Call prisma.user.findFirst',
+              'Filter by where: { email }',
+              'Select only id, name, and email'
+            ],
+            initialCode: `// Fetch a single user record projecting only id, name, and email:
+export async function getVerifiedUser(email: string) {
+  // TODO: Call prisma.user.findFirst with where: { email } and select id, name, and email
+}`,
+            solutionCode: `export async function getVerifiedUser(email: string) {
+  return await prisma.user.findFirst({
+    where: { email },
+    select: { id: true, name: true, email: true }
+  });
+}`,
+            solutionExplanation: 'Using findFirst with select projects exactly the desired fields, guaranteeing optimal network payload size.',
+            hints: [
+              { level: 1, text: 'Filter by where: { email }.' },
+              { level: 2, text: 'Specify select: { id: true, name: true, email: true }.' }
+            ],
+            validation: {
+              targetModel: 'user',
+              requiredMethod: 'findFirst',
+              requiredWhereClauses: ['email'],
+              requiredFieldsInSelect: ['id', 'name', 'email']
+            },
+            successMessage: 'Great work! You fetched the verified user record with a strict projection.'
           }
         ]
       }

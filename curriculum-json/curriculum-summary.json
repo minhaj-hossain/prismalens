@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T15:23:00.713Z",
+  "generatedAt": "2026-09-23T06:59:16.217Z",
   "overview": {
     "totalDays": 14,
     "totalConcepts": 29,
@@ -14,7 +14,7 @@
       "title": "Foundations & Schema Modeling",
       "subtitle": "From Raw SQL to Relational Schemas",
       "description": "Master the database problems ORMs solve, Prisma v7 setup, declarative schema design, native types, constraints, and all relational patterns (1:1, 1:N, M:N).",
-      "daysRange": "Days 1 – 4",
+      "daysRange": "Days 1–4",
       "moduleIds": [
         "day-01",
         "day-02",
@@ -28,7 +28,7 @@
       "title": "Migrations, Operations & Controlled Reads",
       "subtitle": "Database Evolution & Optimized Querying",
       "description": "Safely evolve schemas with migrations and seeders, manage connection pools and client singletons, and build precise read queries with select, include, filters, and pagination.",
-      "daysRange": "Days 5 – 8",
+      "daysRange": "Days 5–8",
       "moduleIds": [
         "day-05",
         "day-06",
@@ -42,7 +42,7 @@
       "title": "Mutations, Data Integrity & Transactions",
       "subtitle": "ACID Guarantees & Safe Writes",
       "description": "Safely accept user input with Zod, execute atomic updates and idempotent upserts, configure referential cascade actions, and master nested writes with ACID transactions.",
-      "daysRange": "Days 9 – 12",
+      "daysRange": "Days 9–12",
       "moduleIds": [
         "day-09",
         "day-10",
@@ -56,7 +56,7 @@
       "title": "Production REST APIs & Resilience",
       "subtitle": "Enterprise Architecture & Hardening",
       "description": "Intercept Prisma error codes without leaking database internals, build robust Express error middleware, and architect a complete production-grade publishing REST API.",
-      "daysRange": "Days 13 – 14",
+      "daysRange": "Days 13–14",
       "moduleIds": [
         "day-13",
         "day-14"
@@ -71,35 +71,36 @@
       "title": "Day 1 — Why Prisma?",
       "shortTitle": "Why Prisma?",
       "milestoneId": "milestone-1",
-      "description": "See how Prisma makes database work easier to write, understand, and maintain in a TypeScript application.",
+      "description": "Learn why traditional raw SQL drivers leave your TypeScript code vulnerable to silent runtime bugs, and how Prisma generates a fully type-safe, auto-completing database client directly from your schema.",
       "estimatedMinutes": 45,
       "completionLearnings": [
-        "Understand why database data and TypeScript code do not naturally use the same types and structure",
-        "Understand how schema.prisma, Prisma Client, and Prisma Migrate fit together",
-        "Write a simple Prisma Client query and understand what it does in the database"
+        "Understand the Object-Relational Impedance Mismatch and why raw SQL strings are invisible to the TypeScript compiler",
+        "Learn how Prisma Client dynamically infers TypeScript return types directly from your query parameters",
+        "Use findUnique and select to fetch lean, targeted records without over-fetching database columns",
+        "Understand the three architectural pillars: schema.prisma, Prisma Client, and Prisma Migrate"
       ],
-      "conceptsCount": 2,
-      "practiceTasksCount": 5,
+      "conceptsCount": 3,
+      "practiceTasksCount": 7,
       "challengeTasksCount": 1,
       "concepts": [
         {
           "id": "day-01-concept-1",
           "order": 1,
-          "title": "Why Databases and TypeScript Disagree (and How Prisma Fixes It)",
-          "shortDescription": "Why SQL strings are invisible to TypeScript and how Prisma gives your backend a generated, strongly typed database API.",
+          "title": "The Type-Safety Gap: Why Raw SQL Fails TypeScript",
+          "shortDescription": "Why raw SQL strings leave your backend blind to typos and schema changes, and how Prisma gives your database queries real compile-time guarantees.",
           "hasMcq": true,
           "tasksCount": 3,
           "tasks": [
             {
               "id": "task-1-1",
-              "title": "Task 1 (Guided): Read and Shape a Prisma Query",
+              "title": "Task 1 (Guided): Read and Shape a Record by Primary Key",
               "type": "guided",
               "targetModel": "user",
               "activeTab": "editor",
               "instructions": [
                 "Call prisma.user.findUnique",
-                "Set where: { id: userId }",
-                "Use select: { id: true, name: true } to return only id and name"
+                "Pass where: { id: userId } to target the primary key",
+                "Use select: { id: true, name: true } so only id and name are retrieved"
               ],
               "validation": {
                 "targetModel": "user",
@@ -115,14 +116,14 @@
             },
             {
               "id": "task-1-2",
-              "title": "Task 2 (Guided): Write a findUnique Query by Unique Email",
+              "title": "Task 2 (Guided): Query by Unique Constraint (Email Lookup)",
               "type": "guided",
               "targetModel": "user",
               "activeTab": "editor",
               "instructions": [
                 "Call prisma.user.findUnique",
-                "Pass where: { email } to filter by unique email",
-                "Use select to return id, name, and email"
+                "Pass where: { email } to filter by the unique email address",
+                "Select id, name, and email in the response"
               ],
               "validation": {
                 "targetModel": "user",
@@ -139,13 +140,13 @@
             },
             {
               "id": "task-1-3",
-              "title": "Task 3 (Independent): Fix an Invalid Field Name (Without \"as any\")",
+              "title": "Task 3 (Independent): Eliminate Type Bypasses (\"as any\")",
               "type": "independent",
               "targetModel": "user",
               "activeTab": "editor",
               "instructions": [
-                "Remove \"as any\" from the query argument",
-                "Replace the nonexistent field user_mail with email in the where filter",
+                "Remove \"as any\" completely from the query",
+                "Replace the invalid field user_mail with the schema-defined email field",
                 "Select id and email in the returned record"
               ],
               "validation": {
@@ -161,14 +162,66 @@
         {
           "id": "day-01-concept-2",
           "order": 2,
-          "title": "How Prisma Fits Together (Schema, Client & Migrate)",
-          "shortDescription": "How schema.prisma, generated Prisma Client, and Prisma Migrate connect your TypeScript backend to your database.",
+          "title": "Lean Projections: Why SELECT * Hurts Production Apps",
+          "shortDescription": "Why fetching entire database rows degrades performance, and how Prisma select shapes both network payloads and TypeScript types.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
             {
               "id": "task-1-4",
-              "title": "Task 1 (Guided): Querying with Precise Field Shape",
+              "title": "Task 1 (Guided): Query a Student Directory with Lean Projection",
+              "type": "guided",
+              "targetModel": "student",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.student.findMany",
+                "Use select: { name: true, department: true }",
+                "Do not fetch unused columns like id, age, or city"
+              ],
+              "validation": {
+                "targetModel": "student",
+                "requiredMethod": "findMany",
+                "requiredFieldsInSelect": [
+                  "name",
+                  "department"
+                ]
+              }
+            },
+            {
+              "id": "task-1-5",
+              "title": "Task 2 (Independent): Build a Safe User Profile Card",
+              "type": "independent",
+              "targetModel": "user",
+              "activeTab": "editor",
+              "instructions": [
+                "Call prisma.user.findUnique with where: { email }",
+                "Select only name and email in the return payload"
+              ],
+              "validation": {
+                "targetModel": "user",
+                "requiredMethod": "findUnique",
+                "requiredWhereClauses": [
+                  "email"
+                ],
+                "requiredFieldsInSelect": [
+                  "name",
+                  "email"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "day-01-concept-3",
+          "order": 3,
+          "title": "The Prisma Triad: Schema, Client, and Migrate",
+          "shortDescription": "How schema.prisma, Prisma Client, and Prisma Migrate coordinate to keep your database, SQL migrations, and TypeScript types in perfect sync.",
+          "hasMcq": true,
+          "tasksCount": 2,
+          "tasks": [
+            {
+              "id": "task-1-6",
+              "title": "Task 1 (Guided): Query Auth Credentials with Precision",
               "type": "guided",
               "targetModel": "user",
               "activeTab": "editor",
@@ -189,23 +242,24 @@
               }
             },
             {
-              "id": "task-1-5",
-              "title": "Task 2 (Independent): Retrieve Public Profile Fields",
+              "id": "task-1-7",
+              "title": "Task 2 (Independent): Query with Schema-Defined Unique Constraint",
               "type": "independent",
               "targetModel": "user",
               "activeTab": "editor",
               "instructions": [
-                "Call prisma.user.findUnique",
+                "Call prisma.user.findFirst",
                 "Filter by where: { email }",
-                "Use select to return only name and email"
+                "Select only id, name, and email"
               ],
               "validation": {
                 "targetModel": "user",
-                "requiredMethod": "findUnique",
+                "requiredMethod": "findFirst",
                 "requiredWhereClauses": [
                   "email"
                 ],
                 "requiredFieldsInSelect": [
+                  "id",
                   "name",
                   "email"
                 ]
@@ -216,13 +270,13 @@
       ],
       "finalChallenge": {
         "id": "day-01-challenge",
-        "title": "Day 1 Challenge: Replace a Legacy User Lookup",
-        "scenario": "Your team is refactoring a legacy Express service. You need to replace an untyped raw SQL helper with a strongly typed Prisma query that retrieves a user by their unique email.",
+        "title": "Day 1 Challenge: The Production API Refactor",
+        "scenario": "Your backend engineering team is deprecating an old Express microservice that relied on fragile, untyped raw SQL strings. You are tasked with replacing the legacy lookup query with a type-safe Prisma query that fetches an active user by email and projects only their id, name, and email fields.",
         "tasksCount": 1,
         "tasks": [
           {
             "id": "challenge-1-1",
-            "title": "Replace Legacy User Lookup with Typed Prisma Query",
+            "title": "Replace Legacy Raw SQL with Typed Prisma Query",
             "type": "challenge",
             "targetModel": "user",
             "activeTab": "editor",
@@ -230,7 +284,7 @@
               "Use prisma.user.findUnique",
               "Filter by where: { email }",
               "Select only id, name, and email",
-              "Do not use raw SQL strings or \"as any\""
+              "Do not use raw SQL strings or \"as any\" type assertions"
             ],
             "validation": {
               "targetModel": "user",
@@ -252,15 +306,15 @@
       "day": 2,
       "id": "day-02",
       "slug": "prisma-setup-v7",
-      "title": "Modern Prisma v7 Setup & Configuration",
-      "shortTitle": "Setup & CLI Tooling",
+      "title": "Day 2 — Modern Prisma Setup & Configuration",
+      "shortTitle": "Setup & Configuration",
       "milestoneId": "milestone-1",
-      "description": "Create a working Prisma + PostgreSQL project, understand Prisma CLI tooling, manage connection pooling, and use introspection (db pull).",
+      "description": "Master datasource configuration, configure connection pooling for serverless and cloud PostgreSQL, and bridge legacy SQL snake_case tables to idiomatic TypeScript camelCase using @map and @@map.",
       "estimatedMinutes": 45,
       "completionLearnings": [
-        "Mastered essential Prisma CLI commands: init, generate, db pull, and studio",
-        "Configured connection pooling strings with PgBouncer query parameters",
-        "Mapped snake_case database tables to camelCase TypeScript models with @map and @@map"
+        "Understand datasource and client generator declarations in schema.prisma",
+        "Configure connection pooling parameters for serverless environments (PgBouncer, Neon, Supabase)",
+        "Map legacy snake_case database tables and columns to clean TypeScript camelCase models without altering live database tables"
       ],
       "conceptsCount": 2,
       "practiceTasksCount": 4,
@@ -269,21 +323,28 @@
         {
           "id": "day-02-concept-1",
           "order": 1,
-          "title": "Prisma CLI Commands & Lifecycle",
-          "shortDescription": "Master npx prisma generate, db pull, and connection pooling configuration.",
+          "title": "Datasource Architecture & Connection Pooling in Cloud Backends",
+          "shortDescription": "How Prisma connects to PostgreSQL, and why serverless environments require connection poolers to prevent database connection exhaustion.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
             {
               "id": "task-2-1",
-              "title": "Task 1 (Guided): Identify Client Generation Command",
+              "title": "Task 1 (Guided): Configure PostgreSQL Datasource & Generator",
               "type": "guided",
-              "targetModel": "cli",
-              "activeTab": "editor",
+              "targetModel": "datasource",
+              "activeTab": "schema",
               "instructions": [
-                "Return the string \"npx prisma generate\" from getGenerateCommand()"
+                "Define datasource db with provider = \"postgresql\" and url = env(\"DATABASE_URL\")",
+                "Define generator client with provider = \"prisma-client-js\""
               ],
-              "validation": {}
+              "validation": {
+                "codeContains": [
+                  "provider = \"postgresql\"",
+                  "url = env(\"DATABASE_URL\")",
+                  "generator client"
+                ]
+              }
             },
             {
               "id": "task-2-2",
@@ -292,33 +353,45 @@
               "targetModel": "url",
               "activeTab": "editor",
               "instructions": [
-                "Parse or manipulate basePostgresUrl",
-                "Ensure pgbouncer=true and connection_limit=10 are set as query params"
+                "Use the standard URL object to parse basePostgresUrl",
+                "Set search parameter pgbouncer to \"true\"",
+                "Set search parameter connection_limit to \"10\"",
+                "Return the updated URL string"
               ],
-              "validation": {}
+              "validation": {
+                "codeContains": [
+                  "searchParams",
+                  "pgbouncer",
+                  "connection_limit"
+                ]
+              }
             }
           ]
         },
         {
           "id": "day-02-concept-2",
           "order": 2,
-          "title": "Database Introspection & Field Mapping (@map, @@map)",
-          "shortDescription": "Keep TypeScript idiomatic in camelCase while retaining legacy snake_case in PostgreSQL.",
+          "title": "The Naming Bridge: Mapping snake_case SQL to camelCase TypeScript",
+          "shortDescription": "How to use @map and @@map to write clean, idiomatic TypeScript while preserving legacy database table and column names.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
             {
               "id": "task-2-3",
-              "title": "Task 1 (Guided): Map Legacy Customer Table and Columns",
+              "title": "Task 1 (Guided): Map Customer Model and Email Column",
               "type": "guided",
               "targetModel": "Customer",
               "activeTab": "schema",
               "instructions": [
                 "Add @map(\"cust_email\") to field email",
-                "Add @@map(\"tbl_customers\") to model Customer"
+                "Add @@map(\"tbl_customers\") at the bottom of model Customer"
               ],
               "validation": {
-                "targetModel": "Customer"
+                "targetModel": "Customer",
+                "codeContains": [
+                  "@map(\"cust_email\")",
+                  "@@map(\"tbl_customers\")"
+                ]
               }
             },
             {
@@ -332,7 +405,11 @@
                 "Map registeredAt to \"registered_at\""
               ],
               "validation": {
-                "targetModel": "Customer"
+                "targetModel": "Customer",
+                "codeContains": [
+                  "@map(\"phone_number\")",
+                  "@map(\"registered_at\")"
+                ]
               }
             }
           ]
@@ -340,23 +417,27 @@
       ],
       "finalChallenge": {
         "id": "day-02-challenge",
-        "title": "Day 2 Final Challenge: Legacy DB Migration Setup",
-        "scenario": "Take an introspected database schema with raw table names (auth_users, sys_logs), rename models into PascalCase TypeScript entities, and apply mappings.",
+        "title": "Day 2 Challenge: Modernize an Introspected Auth Schema",
+        "scenario": "Your engineering team used \"prisma db pull\" to introspect an existing legacy PostgreSQL database. The generated model uses raw snake_case table and column names. Clean up the AuthUser model so developers use clean camelCase properties while the database keeps its exact snake_case columns intact.",
         "tasksCount": 1,
         "tasks": [
           {
             "id": "challenge-2-1",
-            "title": "Step 1: Map Auth User Model",
+            "title": "Map AuthUser Model and Columns",
             "type": "challenge",
             "targetModel": "AuthUser",
             "activeTab": "schema",
             "instructions": [
-              "Define model AuthUser with id Int @id",
+              "Define model AuthUser with id Int @id @default(autoincrement())",
               "Map passwordHash String to \"password_hash\"",
               "Map model to \"auth_users\""
             ],
             "validation": {
-              "targetModel": "AuthUser"
+              "targetModel": "AuthUser",
+              "codeContains": [
+                "@map(\"password_hash\")",
+                "@@map(\"auth_users\")"
+              ]
             }
           }
         ]
@@ -366,15 +447,16 @@
       "day": 3,
       "id": "day-03",
       "slug": "models-fields-enums",
-      "title": "Models, Fields, Enums & Constraints",
+      "title": "Day 3 — Models, Fields, Enums & Constraints",
       "shortTitle": "Models & Constraints",
       "milestoneId": "milestone-1",
-      "description": "Design proper database schemas with primary keys, optional fields, native database types, enums, composite unique constraints, and indexes.",
+      "description": "Design production-grade database schemas: choose appropriate scalar types, handle financial precision with Decimal, enforce valid domain values with Enums, and guarantee integrity with composite unique constraints.",
       "estimatedMinutes": 50,
       "completionLearnings": [
-        "Configured scalar types, optional fields (?), and automated timestamps (@updatedAt)",
-        "Defined type-safe database enums with default values",
-        "Created composite primary keys (@@id) and composite unique constraints (@@unique)"
+        "Understand why JavaScript floating-point numbers break financial math and why Prisma Decimal is required",
+        "Model optional fields (?) vs required fields and use @updatedAt for automated audit timestamps",
+        "Declare native PostgreSQL Enums and configure default values",
+        "Enforce multi-column uniqueness using composite constraints like @@unique([studentId, courseId])"
       ],
       "conceptsCount": 2,
       "practiceTasksCount": 4,
@@ -383,8 +465,8 @@
         {
           "id": "day-03-concept-1",
           "order": 1,
-          "title": "Scalar Types, Optionality & Primary Keys",
-          "shortDescription": "Master String, Int, Decimal, Boolean, DateTime, @id, cuid(), and @updatedAt.",
+          "title": "Scalar Types, Nullability & The Precision Problem",
+          "shortDescription": "Why floating-point numbers corrupt financial data, how cuid() provides distributed IDs, and how nullability works in schema.prisma.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
@@ -404,12 +486,12 @@
               ],
               "validation": {
                 "targetModel": "Product",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "title",
-                  "price",
-                  "createdAt",
-                  "updatedAt"
+                "codeContains": [
+                  "@id",
+                  "@default(cuid())",
+                  "String?",
+                  "Decimal",
+                  "@updatedAt"
                 ]
               }
             },
@@ -428,12 +510,11 @@
               ],
               "validation": {
                 "targetModel": "Article",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "slug",
-                  "title",
-                  "isPublished",
-                  "createdAt"
+                "codeContains": [
+                  "@id",
+                  "@default(autoincrement())",
+                  "@unique",
+                  "@default(false)"
                 ]
               }
             }
@@ -442,8 +523,8 @@
         {
           "id": "day-03-concept-2",
           "order": 2,
-          "title": "Enums & Multi-Field Constraints (@@unique, @@index)",
-          "shortDescription": "Enforce valid domain states with Enums and composite multi-column uniqueness with @@unique.",
+          "title": "Enforcing Invariants: Enums & Multi-Field Constraints",
+          "shortDescription": "How Enums eliminate arbitrary string bugs, and how composite constraints (@@unique, @@id) prevent duplicate data in relational tables.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
@@ -455,14 +536,15 @@
               "activeTab": "schema",
               "instructions": [
                 "Define enum OrderStatus with the 5 statuses",
-                "Model Order with id Int @id, status OrderStatus @default(PENDING), and total Decimal"
+                "Model Order with id Int @id @default(autoincrement()), status OrderStatus @default(PENDING), and total Decimal"
               ],
               "validation": {
                 "targetModel": "Order",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "status",
-                  "total"
+                "codeContains": [
+                  "enum OrderStatus",
+                  "PENDING",
+                  "OrderStatus",
+                  "@default(PENDING)"
                 ]
               }
             },
@@ -476,7 +558,10 @@
                 "Add @@unique([studentId, courseId]) inside model CourseEnrollment"
               ],
               "validation": {
-                "targetModel": "CourseEnrollment"
+                "targetModel": "CourseEnrollment",
+                "codeContains": [
+                  "@@unique([studentId, courseId])"
+                ]
               }
             }
           ]
@@ -484,23 +569,27 @@
       ],
       "finalChallenge": {
         "id": "day-03-challenge",
-        "title": "Day 3 Final Challenge: Complete E-Commerce Schema Blueprint",
-        "scenario": "Design the full schema for DigitalGoodsStore with User (cuid, unique email, role), Product (Decimal price), and UserFavorite (composite primary key).",
+        "title": "Day 3 Challenge: Design an E-Commerce Favorites System",
+        "scenario": "Your e-commerce platform needs a favorites system where users can favorite products. A user can favorite multiple products, and a product can be favorited by multiple users. Design a UserFavorite join model with composite primary key @@id([userId, productId]).",
         "tasksCount": 1,
         "tasks": [
           {
             "id": "challenge-3-1",
-            "title": "Step 1: Define UserFavorite Composite Model",
+            "title": "Design UserFavorite Composite Model",
             "type": "challenge",
             "targetModel": "UserFavorite",
             "activeTab": "schema",
             "instructions": [
               "Define model UserFavorite",
-              "Fields: userId String, productId String, createdAt DateTime @default(now())",
+              "Add userId Int and productId Int",
+              "Add favoritedAt DateTime @default(now())",
               "Add @@id([userId, productId])"
             ],
             "validation": {
-              "targetModel": "UserFavorite"
+              "targetModel": "UserFavorite",
+              "codeContains": [
+                "@@id([userId, productId])"
+              ]
             }
           }
         ]
@@ -510,25 +599,26 @@
       "day": 4,
       "id": "day-04",
       "slug": "relations-modeling",
-      "title": "Relations (1-to-1, 1-to-Many, Many-to-Many)",
+      "title": "Day 4 — Relational Schema Modeling (1:1, 1:N, M:N)",
       "shortTitle": "Relations Modeling",
       "milestoneId": "milestone-1",
-      "description": "Model real-world relationships in Prisma schemas, understand foreign keys, @relation attributes, and implicit vs explicit join tables.",
+      "description": "Master relational modeling in Prisma: understand how foreign keys connect tables, why scalar fields differ from relation fields, enforce 1:1 uniqueness, and model explicit many-to-many join tables.",
       "estimatedMinutes": 55,
       "completionLearnings": [
-        "Mastered 1-to-Many relations: foreign key scalar field (authorId Int) vs relation field (author User)",
-        "Understood 1-to-1 relations and why @unique on foreign key turns 1:N into 1:1",
-        "Distinguished implicit M:N vs explicit M:N join tables with custom relationship attributes"
+        "Differentiate physical foreign key columns (authorId Int) from virtual TypeScript relation fields (author User)",
+        "Understand why 1-to-1 relations require @unique on the foreign key to avoid accidentally creating a 1-to-Many relation",
+        "Model optional relations using nullable foreign keys (Int?)",
+        "Compare Prisma implicit many-to-many relations with explicit join models"
       ],
-      "conceptsCount": 3,
-      "practiceTasksCount": 6,
+      "conceptsCount": 2,
+      "practiceTasksCount": 4,
       "challengeTasksCount": 1,
       "concepts": [
         {
           "id": "day-04-concept-1",
           "order": 1,
-          "title": "One-to-Many (1:N) Relations",
-          "shortDescription": "The fundamental relational pattern: parent holds array, child holds foreign key.",
+          "title": "One-to-Many (1:N): Scalar Columns vs Virtual Relation Fields",
+          "shortDescription": "How foreign keys link tables, and why Prisma cleanly separates the SQL column from the TypeScript navigation property.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
@@ -544,10 +634,9 @@
               ],
               "validation": {
                 "targetModel": "Book",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "title",
-                  "authorId"
+                "codeContains": [
+                  "authorId Int",
+                  "author Author @relation"
                 ]
               }
             },
@@ -563,10 +652,9 @@
               ],
               "validation": {
                 "targetModel": "Employee",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "name",
-                  "companyId"
+                "codeContains": [
+                  "companyId Int?",
+                  "company Company? @relation"
                 ]
               }
             }
@@ -575,8 +663,8 @@
         {
           "id": "day-04-concept-2",
           "order": 2,
-          "title": "One-to-One (1:1) Relations",
-          "shortDescription": "The foreign key in a 1:1 relation MUST be unique to guarantee exclusivity.",
+          "title": "One-to-One (1:1): The @unique Mandate",
+          "shortDescription": "Why omitting @unique on a foreign key accidentally creates a 1:Many relation, and how 1:1 relations enforce strict pairing.",
           "hasMcq": true,
           "tasksCount": 2,
           "tasks": [
@@ -592,10 +680,9 @@
               ],
               "validation": {
                 "targetModel": "AccountSettings",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "darkMode",
-                  "accountId"
+                "codeContains": [
+                  "accountId Int @unique",
+                  "account Account @relation"
                 ]
               }
             },
@@ -610,53 +697,8 @@
               ],
               "validation": {
                 "targetModel": "License",
-                "requiredFieldsInSelect": [
-                  "id",
-                  "number",
-                  "driverId"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "day-04-concept-3",
-          "order": 3,
-          "title": "Many-to-Many (M:N) Relations (Implicit vs Explicit)",
-          "shortDescription": "Choose between Prisma-managed implicit join tables and explicit models with extra metadata.",
-          "hasMcq": true,
-          "tasksCount": 2,
-          "tasks": [
-            {
-              "id": "task-4-5",
-              "title": "Task 1 (Guided): Define Implicit M:N Relation (Post & Category)",
-              "type": "guided",
-              "targetModel": "Post",
-              "activeTab": "schema",
-              "instructions": [
-                "In model Post, add categories Category[]",
-                "In model Category, add posts Post[]"
-              ],
-              "validation": {
-                "targetModel": "Post"
-              }
-            },
-            {
-              "id": "task-4-6",
-              "title": "Task 2 (Independent): Explicit M:N Join Model with Grade",
-              "type": "independent",
-              "targetModel": "ClassEnrollment",
-              "activeTab": "schema",
-              "instructions": [
-                "Define model ClassEnrollment with studentId Int, classRoomId Int, grade Decimal?",
-                "Add relations to Student and ClassRoom",
-                "Add composite primary key @@id([studentId, classRoomId])"
-              ],
-              "validation": {
-                "targetModel": "ClassEnrollment",
-                "requiredFieldsInSelect": [
-                  "studentId",
-                  "classRoomId"
+                "codeContains": [
+                  "driverId Int @unique"
                 ]
               }
             }
@@ -665,26 +707,27 @@
       ],
       "finalChallenge": {
         "id": "day-04-challenge",
-        "title": "Day 4 Final Challenge: Social Network Relational Core",
-        "scenario": "Build the complete relational schema for a social network: User to Profile (1:1), User to Post (1:N), and Post to Comment (1:N).",
+        "title": "Day 4 Challenge: Model a Hospital Doctor-Patient Relational Graph",
+        "scenario": "A healthcare SaaS platform needs relational models for Doctor and Appointment. A Doctor has many Appointments, and an Appointment belongs to exactly one Doctor. Model this 1-to-Many relationship with proper foreign keys.",
         "tasksCount": 1,
         "tasks": [
           {
             "id": "challenge-4-1",
-            "title": "Step 1: Wire Up Post and Comment Relation",
+            "title": "Model Doctor-Appointment 1:N Relationship",
             "type": "challenge",
-            "targetModel": "Comment",
+            "targetModel": "Appointment",
             "activeTab": "schema",
             "instructions": [
-              "In model Comment, add postId Int",
-              "Add post Post @relation(fields: [postId], references: [id])"
+              "In model Doctor, add appointments Appointment[]",
+              "In model Appointment, add doctorId Int",
+              "In model Appointment, add doctor Doctor @relation(fields: [doctorId], references: [id])"
             ],
             "validation": {
-              "targetModel": "Comment",
-              "requiredFieldsInSelect": [
-                "id",
-                "content",
-                "postId"
+              "targetModel": "Appointment",
+              "codeContains": [
+                "appointments Appointment[]",
+                "doctorId Int",
+                "doctor Doctor @relation"
               ]
             }
           }

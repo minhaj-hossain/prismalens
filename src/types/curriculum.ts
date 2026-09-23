@@ -135,6 +135,13 @@ export interface GeneratedSqlResult {
   nPlusOneExplanation?: string;
 }
 
+export interface DayLocation {
+  conceptId: string;
+  subStep: 'overview' | 'theory' | 'practice' | 'challenge';
+  taskId?: string;
+  timestamp?: number;
+}
+
 // User state & progress
 export interface UserProgressState {
   completedTaskIds: string[];
@@ -149,4 +156,5 @@ export interface UserProgressState {
   lastActiveDate: string; // ISO string
   xp: number;
   taskUserCode: Record<string, string>; // Saved code per task
+  lastVisitedByDay?: Record<string, DayLocation>;
 }

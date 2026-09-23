@@ -2,48 +2,49 @@
   "id": "day-03",
   "slug": "models-fields-enums",
   "day": 3,
-  "title": "Models, Fields, Enums & Constraints",
+  "title": "Day 3 — Models, Fields, Enums & Constraints",
   "shortTitle": "Models & Constraints",
   "milestoneId": "milestone-1",
-  "description": "Design proper database schemas with primary keys, optional fields, native database types, enums, composite unique constraints, and indexes.",
+  "description": "Design production-grade database schemas: choose appropriate scalar types, handle financial precision with Decimal, enforce valid domain values with Enums, and guarantee integrity with composite unique constraints.",
   "estimatedMinutes": 50,
   "completionLearnings": [
-    "Configured scalar types, optional fields (?), and automated timestamps (@updatedAt)",
-    "Defined type-safe database enums with default values",
-    "Created composite primary keys (@@id) and composite unique constraints (@@unique)"
+    "Understand why JavaScript floating-point numbers break financial math and why Prisma Decimal is required",
+    "Model optional fields (?) vs required fields and use @updatedAt for automated audit timestamps",
+    "Declare native PostgreSQL Enums and configure default values",
+    "Enforce multi-column uniqueness using composite constraints like @@unique([studentId, courseId])"
   ],
   "concepts": [
     {
       "id": "day-03-concept-1",
       "order": 1,
-      "title": "Scalar Types, Optionality & Primary Keys",
-      "shortDescription": "Master String, Int, Decimal, Boolean, DateTime, @id, cuid(), and @updatedAt.",
+      "title": "Scalar Types, Nullability & The Precision Problem",
+      "shortDescription": "Why floating-point numbers corrupt financial data, how cuid() provides distributed IDs, and how nullability works in schema.prisma.",
       "theory": {
-        "summary": "Prisma scalar fields map to SQL columns. Fields are non-nullable by default unless marked with ?. Primary keys are designated with @id (autoincrement, cuid, or uuid). @updatedAt automatically writes timestamps upon every update.",
+        "summary": "In TypeScript and JavaScript, all standard numbers are 64-bit binary floating-point numbers (IEEE 754). This creates subtle calculation errors:\n0.1 + 0.2 // equals 0.30000000000000004!\n\nIf you use Float to store prices, account balances, or financial transactions, rounding errors will eventually corrupt your accounting ledger. Prisma provides Decimal to represent arbitrary-precision fixed-point numbers mapped directly to PostgreSQL's native DECIMAL/NUMERIC types.\n\nBeyond scalar types, schema.prisma enforces strict nullability:\n- title String: Stored as NOT NULL in SQL. TypeScript infers string.\n- description String?: Stored as NULL in SQL. TypeScript infers string | null.\n\nFor identifiers, autoincrementing integers (1, 2, 3...) are predictable and expose your database record count. Modern distributed systems frequently use cuid() or uuid() to generate collision-resistant string IDs on the client or server without roundtrips.",
         "targetHero": {
           "language": "prisma",
-          "badge": "Production Entity Pattern",
-          "explanation": "A production model featuring cuid() IDs, native Decimal precision, optional descriptions, and automated timestamps.",
-          "code": "model Product {\n  id          String   @id @default(cuid())\n  sku         String   @unique\n  title       String\n  description String?\n  price       Decimal  @db.Decimal(10, 2)\n  inStock     Boolean  @default(true)\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n}"
+          "badge": "Production Field Design",
+          "explanation": "Demonstrating cuid IDs, Decimal precision for money, optional fields, and automatic timestamps.",
+          "code": "model Product {\n  id          String   @id @default(cuid())\n  sku         String   @unique\n  title       String\n  description String?  // Optional field\n  price       Decimal  // Arbitrary-precision decimal for currency\n  inStock     Boolean  @default(true)\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt // Automatically updated on every save!\n}"
         },
         "explanation": [
-          "String?: Question mark indicates an optional (nullable) field.",
-          "Decimal: Precise floating numbers for financial and e-commerce calculations without JavaScript IEEE 754 float rounding errors.",
-          "@updatedAt: Managed automatically by Prisma engine; records the exact moment any update operation touches the row."
+          "Always use Decimal instead of Float for prices and monetary amounts to prevent binary rounding bugs.",
+          "The question mark (?) denotes optionality. In TypeScript, it translates to string | null.",
+          "@updatedAt is automatically maintained by the Prisma engine on every update query."
         ],
-        "keyTakeaway": "Always use Decimal for money and currency calculations; never use Float.",
+        "keyTakeaway": "Use Decimal for financial values to prevent rounding inaccuracies, and use ? to indicate nullable fields.",
         "mcqs": [
           {
             "id": "mcq-3-1",
-            "question": "Which type should you always choose for prices and monetary amounts in Prisma?",
+            "question": "Why should you choose Decimal instead of Float for storing monetary amounts in Prisma?",
             "options": [
-              "Float",
-              "Decimal",
-              "Int (cents only)",
-              "String"
+              "PostgreSQL does not support Float columns",
+              "Float suffers from binary floating-point rounding inaccuracies (e.g. 0.1 + 0.2 !== 0.3), while Decimal provides exact precision",
+              "Decimal columns take up less storage space than Float",
+              "Float requires manual migrations while Decimal does not"
             ],
             "correctIndex": 1,
-            "explanation": "Decimal prevents floating-point inaccuracies and maps to SQL DECIMAL(precision, scale)."
+            "explanation": "Decimal maps to SQL NUMERIC/DECIMAL, preserving exact precision for currency and financial calculations."
           }
         ]
       },
@@ -51,7 +52,7 @@
         {
           "id": "task-3-1",
           "title": "Task 1 (Guided): Create Product Model with Precision Types",
-          "description": "Create a Product model with cuid() id, required title, optional description, Decimal price, and timestamps.",
+          "description": "Create a Product model with a cuid() id, required title, optional description (String?), Decimal price, and automated timestamps.",
           "type": "guided",
           "targetModel": "Product",
           "activeTab": "schema",
@@ -63,7 +64,7 @@
             "createdAt DateTime @default(now())",
             "updatedAt DateTime @updatedAt"
           ],
-          "initialCode": "// Define the Product model here:\n",
+          "initialCode": "// Define the Product model:\n",
           "solutionCode": "model Product {\n  id          String   @id @default(cuid())\n  title       String\n  description String?\n  price       Decimal\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n}",
           "solutionExplanation": "Creates Product model with cuid primary key, nullable description, and timestamp directives.",
           "hints": [
@@ -78,15 +79,15 @@
           ],
           "validation": {
             "targetModel": "Product",
-            "requiredFieldsInSelect": [
-              "id",
-              "title",
-              "price",
-              "createdAt",
-              "updatedAt"
+            "codeContains": [
+              "@id",
+              "@default(cuid())",
+              "String?",
+              "Decimal",
+              "@updatedAt"
             ]
           },
-          "successMessage": "Great job! Model Product matches production standards."
+          "successMessage": "Great job! Model Product matches modern schema standards."
         },
         {
           "id": "task-3-2",
@@ -113,12 +114,11 @@
           ],
           "validation": {
             "targetModel": "Article",
-            "requiredFieldsInSelect": [
-              "id",
-              "slug",
-              "title",
-              "isPublished",
-              "createdAt"
+            "codeContains": [
+              "@id",
+              "@default(autoincrement())",
+              "@unique",
+              "@default(false)"
             ]
           },
           "successMessage": "Well done! Model Article defined with unique constraint."
@@ -128,34 +128,34 @@
     {
       "id": "day-03-concept-2",
       "order": 2,
-      "title": "Enums & Multi-Field Constraints (@@unique, @@index)",
-      "shortDescription": "Enforce valid domain states with Enums and composite multi-column uniqueness with @@unique.",
+      "title": "Enforcing Invariants: Enums & Multi-Field Constraints",
+      "shortDescription": "How Enums eliminate arbitrary string bugs, and how composite constraints (@@unique, @@id) prevent duplicate data in relational tables.",
       "theory": {
-        "summary": "Enums restrict column values to a predefined list in the database. Multi-column composite constraints (@@unique([userId, orgId])) guarantee that combinations of columns remain unique together.",
+        "summary": "Storing status values as raw strings (e.g. status String) is an anti-pattern. A typo like \"pendng\" or \"canclled\" will bypass TypeScript if passed dynamically and corrupt database state.\n\nPrisma solves this with Enums:\nenum OrderStatus {\n  PENDING\n  PROCESSING\n  SHIPPED\n  DELIVERED\n  CANCELLED\n}\n\nPrisma creates a native PostgreSQL ENUM type. At the database engine level, PostgreSQL rejects any value not in the enum list, storing the value as a compact 4-byte internal identifier.\n\nFurthermore, many domain rules require multi-column uniqueness. For example, a student can enroll in multiple courses, and a course has many students. But a student must never be allowed to enroll in the same course twice! Placing @unique on studentId prevents multiple courses; placing @unique on courseId limits the course to one student. The correct solution is a composite unique constraint:\n@@unique([studentId, courseId])\n\nThis tells PostgreSQL: allow multiple occurrences of studentId and courseId, but the combination of both must remain strictly unique.",
         "targetHero": {
           "language": "prisma",
           "badge": "Composite Constraints Pattern",
-          "explanation": "Using enums and composite primary keys with @@id([userId, orgId]).",
+          "explanation": "Combining Enums with multi-column composite constraints for domain integrity.",
           "code": "enum Role {\n  USER\n  EDITOR\n  ADMIN\n}\n\nmodel Membership {\n  userId String\n  orgId  String\n  role   Role   @default(USER)\n\n  @@id([userId, orgId])\n  @@index([role])\n}"
         },
         "explanation": [
-          "enum: Stored natively in PostgreSQL as an ENUM type.",
-          "@@id([a, b]): Creates a composite primary key formed by multiple columns.",
-          "@@unique([a, b]): Allows unique pairs while letting each individual column have duplicates."
+          "Enums restrict column values to a finite set validated at both compile time and database level.",
+          "@@unique([colA, colB]) guarantees that no two rows can have the same combination of values.",
+          "@@id([colA, colB]) establishes a composite primary key formed by multiple columns."
         ],
-        "keyTakeaway": "Use composite constraints to prevent duplicate enrollments, favorites, or memberships.",
+        "keyTakeaway": "Use Enums to prevent invalid status strings, and use composite constraints to prevent duplicate enrollments, favorites, or memberships.",
         "mcqs": [
           {
             "id": "mcq-3-2",
-            "question": "When should you use @@unique([studentId, courseId])?",
+            "question": "When should you declare @@unique([studentId, courseId]) instead of putting @unique on studentId?",
             "options": [
-              "When a student can only ever take one course in their lifetime",
-              "When a student cannot enroll in the same course more than once",
-              "When only one student is allowed per course",
-              "When courses must have unique titles"
+              "When each student can only enroll in a single course in their entire life",
+              "When students can enroll in multiple courses, but must not be enrolled in the exact same course twice",
+              "When each course can only have one enrolled student",
+              "When you want course IDs to be generated automatically"
             ],
             "correctIndex": 1,
-            "explanation": "Composite unique ensures the combination of (studentId, courseId) is distinct."
+            "explanation": "A composite unique constraint guarantees that the pair (studentId, courseId) is unique, preventing duplicate enrollments while allowing students to take multiple courses."
           }
         ]
       },
@@ -169,7 +169,7 @@
           "activeTab": "schema",
           "instructions": [
             "Define enum OrderStatus with the 5 statuses",
-            "Model Order with id Int @id, status OrderStatus @default(PENDING), and total Decimal"
+            "Model Order with id Int @id @default(autoincrement()), status OrderStatus @default(PENDING), and total Decimal"
           ],
           "initialCode": "// Define enum OrderStatus and model Order:\n",
           "solutionCode": "enum OrderStatus {\n  PENDING\n  PROCESSING\n  SHIPPED\n  DELIVERED\n  CANCELLED\n}\n\nmodel Order {\n  id     Int         @id @default(autoincrement())\n  status OrderStatus @default(PENDING)\n  total  Decimal\n}",
@@ -186,13 +186,14 @@
           ],
           "validation": {
             "targetModel": "Order",
-            "requiredFieldsInSelect": [
-              "id",
-              "status",
-              "total"
+            "codeContains": [
+              "enum OrderStatus",
+              "PENDING",
+              "OrderStatus",
+              "@default(PENDING)"
             ]
           },
-          "successMessage": "Great work! OrderStatus enum provides robust domain constraint."
+          "successMessage": "Great work! OrderStatus enum provides robust domain constraints."
         },
         {
           "id": "task-3-4",
@@ -214,32 +215,36 @@
             }
           ],
           "validation": {
-            "targetModel": "CourseEnrollment"
+            "targetModel": "CourseEnrollment",
+            "codeContains": [
+              "@@unique([studentId, courseId])"
+            ]
           },
-          "successMessage": "Excellent! Duplicate enrollments are physically blocked at the database level."
+          "successMessage": "Excellent! Duplicate enrollments are prevented at the database level."
         }
       ]
     }
   ],
   "challenge": {
     "id": "day-03-challenge",
-    "title": "Day 3 Final Challenge: Complete E-Commerce Schema Blueprint",
-    "scenario": "Design the full schema for DigitalGoodsStore with User (cuid, unique email, role), Product (Decimal price), and UserFavorite (composite primary key).",
+    "title": "Day 3 Challenge: Design an E-Commerce Favorites System",
+    "scenario": "Your e-commerce platform needs a favorites system where users can favorite products. A user can favorite multiple products, and a product can be favorited by multiple users. Design a UserFavorite join model with composite primary key @@id([userId, productId]).",
     "tasks": [
       {
         "id": "challenge-3-1",
-        "title": "Step 1: Define UserFavorite Composite Model",
-        "description": "Model UserFavorite with userId String, productId String, and @@id([userId, productId]).",
+        "title": "Design UserFavorite Composite Model",
+        "description": "Create model UserFavorite with userId Int, productId Int, favoritedAt DateTime @default(now()), and composite primary key @@id([userId, productId]).",
         "type": "challenge",
         "targetModel": "UserFavorite",
         "activeTab": "schema",
         "instructions": [
           "Define model UserFavorite",
-          "Fields: userId String, productId String, createdAt DateTime @default(now())",
+          "Add userId Int and productId Int",
+          "Add favoritedAt DateTime @default(now())",
           "Add @@id([userId, productId])"
         ],
-        "initialCode": "// Define UserFavorite model with composite primary key:\n",
-        "solutionCode": "model UserFavorite {\n  userId    String\n  productId String\n  createdAt DateTime @default(now())\n\n  @@id([userId, productId])\n}",
+        "initialCode": "// Define model UserFavorite with composite primary key:\n",
+        "solutionCode": "model UserFavorite {\n  userId      Int\n  productId   Int\n  favoritedAt DateTime @default(now())\n\n  @@id([userId, productId])\n}",
         "solutionExplanation": "Creates a clean join model with composite primary key.",
         "hints": [
           {
@@ -248,7 +253,10 @@
           }
         ],
         "validation": {
-          "targetModel": "UserFavorite"
+          "targetModel": "UserFavorite",
+          "codeContains": [
+            "@@id([userId, productId])"
+          ]
         },
         "successMessage": "UserFavorite composite model configured!"
       }
